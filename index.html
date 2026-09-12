@@ -150,7 +150,6 @@ select{
   font:inherit;font-size:13px;background:var(--panel);color:var(--ink);
   border:1px solid var(--line-strong);border-radius:8px;padding:7px 10px;cursor:pointer;
 }
-footer{margin-top:30px;font-size:12px;color:var(--ink-soft);border-top:1px solid var(--line);padding-top:12px}
 .hint{font-size:12px;color:var(--ink-soft);margin:6px 0 0}
 .tabs{display:flex;gap:6px;margin-bottom:14px}
 .tab{
@@ -186,11 +185,18 @@ footer{margin-top:30px;font-size:12px;color:var(--ink-soft);border-top:1px solid
 .progchords{display:flex;gap:10px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px}
 .progchord{flex:0 0 auto;width:110px;text-align:center;position:relative}
 .progchord .cname{font-family:"Instrument Serif",Georgia,serif;font-size:16px;margin-bottom:2px}
-.prognav{display:flex;justify-content:center;gap:4px;margin-top:4px}
+.prognav{display:flex;justify-content:center;gap:8px;margin-top:6px}
 .prognav button{
-  font:inherit;font-size:13px;background:var(--panel);color:var(--ink);
-  border:1px solid var(--line-strong);border-radius:6px;padding:2px 10px;cursor:pointer;
+  font:inherit;font-size:15px;background:var(--panel);color:var(--ink);
+  border:1px solid var(--line-strong);border-radius:8px;padding:8px 16px;cursor:pointer;
 }
+.progdiagram{background:none;border:none;padding:0;margin:0;display:block;width:100%;cursor:pointer}
+.chordbar .degree{
+  flex:1 0 100%;
+  font-size:11px;letter-spacing:.05em;text-transform:uppercase;
+  color:var(--ink-soft);margin:14px 0 -2px;
+}
+.chordbar .degree:first-child{margin-top:0}
 .progchord .rm{
   position:absolute;top:-6px;right:2px;
   width:18px;height:18px;border-radius:999px;
@@ -211,10 +217,10 @@ footer{margin-top:30px;font-size:12px;color:var(--ink-soft);border-top:1px solid
   <button class="pill small" id="themeToggle" aria-label="Byt tema"></button>
 </div>
 
-<div class="tabs" role="tablist">
-  <button class="tab" role="tab" id="tabbtn-ackord" aria-selected="true" data-tab="ackord">Ackord</button>
-  <button class="tab" role="tab" id="tabbtn-grepp" aria-selected="false" data-tab="grepp">Grepp</button>
-  <button class="tab" role="tab" id="tabbtn-vandningar" aria-selected="false" data-tab="vandningar">Vändningar</button>
+<div class="tabs" role="tablist" id="tabs">
+  <button class="tab" role="tab" id="tabbtn-ackord" aria-selected="true" tabindex="0" data-tab="ackord">Ackord</button>
+  <button class="tab" role="tab" id="tabbtn-grepp" aria-selected="false" tabindex="-1" data-tab="grepp">Grepp</button>
+  <button class="tab" role="tab" id="tabbtn-vandningar" aria-selected="false" tabindex="-1" data-tab="vandningar">Vändningar</button>
 </div>
 
 <div id="tab-ackord" class="tabpanel" role="tabpanel" aria-labelledby="tabbtn-ackord">
@@ -247,6 +253,11 @@ footer{margin-top:30px;font-size:12px;color:var(--ink-soft);border-top:1px solid
     <div class="neck-scroll"><svg id="neck" role="img" aria-label="Halsdiagram med ackordets toner"></svg></div>
     <p class="hint" id="neckHint"></p>
   </div>
+
+  <details class="filters">
+    <summary>Hur funkar greppen?</summary>
+    <p style="margin:10px 0 0;font-size:13px;color:var(--ink-soft)">Varje sträng ligger öppen eller greppas på ett band vars ton hör till ackordet — max fyra fingrar, max fem bands spännvidd. Tryck på ett grepp för att höra det.</p>
+  </details>
 
   <details class="filters">
     <summary>Filter</summary>
@@ -295,9 +306,6 @@ footer{margin-top:30px;font-size:12px;color:var(--ink-soft);border-top:1px solid
   <div id="progsCustom"></div>
 </div>
 
-<footer>
-  Greppen genereras från stämningen: varje sträng får ligga öppen eller greppas på ett band vars ton hör till ackordet, med max fyra fingrar och max fem bands spännvidd. Tryck på ett grepp för att höra det.
-</footer>
 </div>
 
 <script>
@@ -424,6 +432,12 @@ function buildChords(){
     for(const iv of extra){
       if(iv.every(i=>scaleSet.has((degRoot+i)%12))) cand.push(iv);
     }
+    // det diatoniska skalstegets egen kvalitet (för gruppering) — sus-/6-/9-varianter
+    // saknar ters och är alltid "min:false" i QMAP oavsett steg, så de kan inte användas för det
+    const triadQ=QMAP.get(qKey([0,norm(t3),norm(t5)]));
+    let degRoman=ROMAN[degRel];
+    if(triadQ && triadQ.min) degRoman=degRoman.toLowerCase();
+    if(triadQ && triadQ.sfx==="°") degRoman+="°";
     for(const iv of cand){
       const q=QMAP.get(qKey(iv));
       if(!q) continue;
@@ -431,7 +445,7 @@ function buildChords(){
       if(out.some(c=>c.name===name)) continue;
       let rn=ROMAN[degRel];
       if(q.min) rn=rn.toLowerCase();
-      out.push({root:degRoot,iv:iv.slice().sort((a,b)=>a-b),sfx:q.sfx,fam:q.fam,name,roman:rn+(q.sfx==="°"||q.sfx==="°7"?"°":"")});
+      out.push({root:degRoot,iv:iv.slice().sort((a,b)=>a-b),sfx:q.sfx,fam:q.fam,name,roman:rn+(q.sfx==="°"||q.sfx==="°7"?"°":""),deg:d,degRoman});
     }
   }
   return out;
@@ -706,10 +720,18 @@ function renderChords(){
   const list=state.family==="alla"?CHORDS:CHORDS.filter(c=>c.fam===state.family);
   if(!state.chord || !list.some(c=>c.name===state.chord.name)) state.chord=list[0];
   const box=el("chords"); box.innerHTML="";
+  let lastDeg=null;
   list.forEach(c=>{
+    if(c.deg!==lastDeg){
+      const lbl=document.createElement("div");
+      lbl.className="degree";
+      lbl.textContent=c.degRoman;
+      box.appendChild(lbl);
+      lastDeg=c.deg;
+    }
     const b=document.createElement("button");
     b.className="chip";
-    b.innerHTML=`<span class="nm">${c.name}</span><span class="rn">${c.roman}</span>`;
+    b.innerHTML=`<span class="nm">${c.name}</span>`;
     b.setAttribute("aria-pressed",state.chord && c.name===state.chord.name);
     b.onclick=()=>{ state.chord=c; state.tab="grepp"; renderChords(); drawNeck(); renderVoicings(); renderTabs(); };
     box.appendChild(b);
@@ -726,7 +748,13 @@ function progRow(items,opts){
     const cell=document.createElement("div");
     cell.className="progchord";
     cell.innerHTML=`<div class="cname">${it.label}</div>`+
-      (it.voicing?diagram(it.voicing,it.tuning):`<div class="empty" style="padding:14px 4px;font-size:11px">Inget grepp</div>`);
+      (it.voicing?`<button class="progdiagram" aria-label="Spela ${it.label}">${diagram(it.voicing,it.tuning)}</button>`:`<div class="empty" style="padding:14px 4px;font-size:11px">Inget grepp</div>`);
+    if(it.voicing){
+      cell.querySelector(".progdiagram").onclick=async()=>{
+        const c=ctx(); if(c.state==="suspended") await c.resume();
+        strum(it.voicing.notes);
+      };
+    }
     if(opts.scrollable){
       const nav=document.createElement("div"); nav.className="prognav";
       const prev=document.createElement("button"); prev.textContent="‹"; prev.setAttribute("aria-label","Föregående grepp för "+it.label);
@@ -909,7 +937,9 @@ function renderAll(){
 }
 function renderTabs(){
   document.querySelectorAll(".tab").forEach(b=>{
-    b.setAttribute("aria-selected", b.dataset.tab===state.tab);
+    const selected=b.dataset.tab===state.tab;
+    b.setAttribute("aria-selected", selected);
+    b.tabIndex = selected ? 0 : -1;
   });
   el("tab-ackord").hidden = state.tab!=="ackord";
   el("tab-grepp").hidden = state.tab!=="grepp";
@@ -935,6 +965,21 @@ function renderTabs(){
 
   document.querySelectorAll(".tab").forEach(b=>{
     b.onclick=()=>{ state.tab=b.dataset.tab; renderTabs(); };
+  });
+  el("tabs").addEventListener("keydown",e=>{
+    const tabs=[...document.querySelectorAll(".tab")];
+    const idx=tabs.findIndex(b=>b.dataset.tab===state.tab);
+    let next=null;
+    if(e.key==="ArrowRight") next=tabs[(idx+1)%tabs.length];
+    else if(e.key==="ArrowLeft") next=tabs[(idx-1+tabs.length)%tabs.length];
+    else if(e.key==="Home") next=tabs[0];
+    else if(e.key==="End") next=tabs[tabs.length-1];
+    if(next){
+      e.preventDefault();
+      state.tab=next.dataset.tab;
+      renderTabs();
+      next.focus();
+    }
   });
 
   el("themeToggle").onclick=cycleTheme;
