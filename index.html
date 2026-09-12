@@ -711,7 +711,7 @@ function renderChords(){
     b.className="chip";
     b.innerHTML=`<span class="nm">${c.name}</span><span class="rn">${c.roman}</span>`;
     b.setAttribute("aria-pressed",state.chord && c.name===state.chord.name);
-    b.onclick=()=>{ state.chord=c; renderChords(); drawNeck(); renderVoicings(); };
+    b.onclick=()=>{ state.chord=c; state.tab="grepp"; renderChords(); drawNeck(); renderVoicings(); renderTabs(); };
     box.appendChild(b);
   });
   el("scaleNotes").textContent=scalePcs().map(nn).join(" ");
