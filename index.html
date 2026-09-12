@@ -65,6 +65,8 @@ h1{
   letter-spacing:-.01em;
 }
 .tagline{color:var(--ink-soft);margin:0 0 20px;font-size:14px;max-width:52ch}
+.header-row{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.header-row .pill{flex:0 0 auto;white-space:nowrap}
 .panel{
   background:var(--panel);
   border:1px solid var(--line);
@@ -201,8 +203,13 @@ footer{margin-top:30px;font-size:12px;color:var(--ink-soft);border-top:1px solid
 <body>
 <div class="wrap">
 
-<h1>Ackordkartan</h1>
-<p class="tagline">Välj tonart och ackord. Appen söker igenom hela halsen efter grepp som klingar med öppna strängar – inte bara barrégrepp i första läget.</p>
+<div class="header-row">
+  <div>
+    <h1>Ackordkartan</h1>
+    <p class="tagline">Välj tonart och ackord. Appen söker igenom hela halsen efter grepp som klingar med öppna strängar – inte bara barrégrepp i första läget.</p>
+  </div>
+  <button class="pill small" id="themeToggle" aria-label="Byt tema"></button>
+</div>
 
 <div class="tabs" role="tablist">
   <button class="tab" role="tab" id="tabbtn-ackord" aria-selected="true" data-tab="ackord">Ackord</button>
@@ -374,6 +381,24 @@ function saveSavedProgs(list){
   catch(err){ /* privat läge, full kvot o.dyl. — sparas bara i minnet denna session */ }
 }
 let savedProgs=loadSavedProgs();
+
+/* ---------- Tema ---------- */
+const THEME_KEY="ackordkartan:theme";
+const THEME_LABELS={auto:"🖥 Auto", light:"☀ Ljust", dark:"🌙 Mörkt"};
+let themeMode="auto";
+try{ themeMode=localStorage.getItem(THEME_KEY)||"auto"; }catch(err){ /* privat läge o.dyl. — kör auto denna session */ }
+function applyTheme(){
+  if(themeMode==="auto") document.documentElement.removeAttribute("data-theme");
+  else document.documentElement.setAttribute("data-theme",themeMode);
+  const btn=el("themeToggle");
+  if(btn) btn.textContent=THEME_LABELS[themeMode];
+}
+function cycleTheme(){
+  themeMode = themeMode==="auto" ? "light" : themeMode==="light" ? "dark" : "auto";
+  try{ localStorage.setItem(THEME_KEY,themeMode); }catch(err){ /* privat läge, full kvot o.dyl. — sparas bara i minnet denna session */ }
+  applyTheme();
+}
+applyTheme();
 
 /* ---------- Ackord i tonarten ---------- */
 function scalePcs(){
@@ -911,6 +936,8 @@ function renderTabs(){
   document.querySelectorAll(".tab").forEach(b=>{
     b.onclick=()=>{ state.tab=b.dataset.tab; renderTabs(); };
   });
+
+  el("themeToggle").onclick=cycleTheme;
 
   el("newProgBtn").onclick=openBuilder;
   el("builderClear").onclick=()=>{ state.progBuilder.chords=[]; renderBuilder(); };

@@ -42,7 +42,7 @@ Allt UI-tillstånd hålls i det globala `state`-objektet (tuning, mode, root, ch
 - **Under uppbyggnad** (`state.progBuilder = {chords:[{chord, idx}]}` medan `#progBuilder` är synlig) — `renderBuilderChips()` listar alla ackord i aktuell tonart (oberoende av familjefiltret) att lägga till; `renderBuilder()` ritar sekvensen med samma bläddring+✕-borttag. `openBuilder()`/`closeBuilder()` växlar synlighet.
 - **Sparade** (`renderCustomProgs()`, `localStorage`-nyckel `ackordkartan:progressions`) — låsta till exakta band + den stämning de sparades i (`{id, name, tuning, chords:[{name, frets}]}`), ingen bläddring. Renderas via `voicingFromFrets()` med den sparade `tuning`, oberoende av vilken stämning som är vald just nu. `localStorage`-fel (privat läge, full kvot) sväljs tyst i `loadSavedProgs()`/`saveSavedProgs()` — appen funkar då utan att spara mellan sessioner.
 
-Ljust/mörkt läge styrs enbart via CSS custom properties och `prefers-color-scheme` (ingen JS-togglelogik), med `[data-theme]`-attribut som manuell override-krok (används inte av appen själv idag).
+Ljust/mörkt läge styrs via CSS custom properties och `prefers-color-scheme`, med `[data-theme]`-attributet på `<html>` som manuell override-krok. `themeMode` ("auto"/"light"/"dark", `localStorage`-nyckel `ackordkartan:theme`) styr detta via `applyTheme()`/`cycleTheme()` — temaknappen i headern cyklar mellan lägena.
 
 ## PWA
 
