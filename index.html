@@ -674,7 +674,7 @@ function renderFamilies(){
     const b=document.createElement("button");
     b.className="pill small"; b.textContent=lbl;
     b.setAttribute("aria-pressed",state.family===k);
-    b.onclick=()=>{ state.family=k; renderChords(); renderVoicings(); };
+    b.onclick=()=>{ state.family=k; renderFamilies(); renderChords(); renderVoicings(); };
     box.appendChild(b);
   });
 }
