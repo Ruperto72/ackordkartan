@@ -129,7 +129,7 @@ select{
   position:relative;
   color:var(--ink);
 }
-.card:focus-visible,.pill:focus-visible,.chip:focus-visible,select:focus-visible,button:focus-visible{
+.card:focus-visible,.pill:focus-visible,.chip:focus-visible,select:focus-visible,button:focus-visible,.tab:focus-visible,summary:focus-visible{
   outline:2px solid var(--brass);outline-offset:2px;
 }
 .card .cname{font-family:"Instrument Serif",Georgia,serif;font-size:20px;line-height:1.1}
@@ -145,6 +145,20 @@ select{
 }
 footer{margin-top:30px;font-size:12px;color:var(--ink-soft);border-top:1px solid var(--line);padding-top:12px}
 .hint{font-size:12px;color:var(--ink-soft);margin:6px 0 0}
+.tabs{display:flex;gap:6px;margin-bottom:14px}
+.tab{
+  flex:1;
+  font:inherit;font-size:14px;font-weight:500;
+  background:var(--panel);
+  color:var(--ink);
+  border:1px solid var(--line-strong);
+  border-radius:8px;
+  padding:9px 12px;
+  cursor:pointer;
+  text-align:center;
+}
+.tab[aria-selected="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.tabpanel[hidden]{display:none}
 </style>
 </head>
 <body>
@@ -153,35 +167,45 @@ footer{margin-top:30px;font-size:12px;color:var(--ink-soft);border-top:1px solid
 <h1>Ackordkartan</h1>
 <p class="tagline">Välj tonart och ackord. Appen söker igenom hela halsen efter grepp som klingar med öppna strängar – inte bara barrégrepp i första läget.</p>
 
-<div class="panel">
-  <div class="row">
-    <label class="field">Stämning
-      <select id="tuning"></select>
-    </label>
-    <label class="field">Skala
-      <select id="mode"></select>
-    </label>
-  </div>
-  <div class="row" style="margin-top:12px">
-    <div class="pills" id="roots"></div>
-  </div>
+<div class="tabs" role="tablist">
+  <button class="tab" role="tab" id="tabbtn-ackord" aria-selected="true" data-tab="ackord">Ackord</button>
+  <button class="tab" role="tab" id="tabbtn-grepp" aria-selected="false" data-tab="grepp">Grepp</button>
 </div>
 
-<div class="panel">
-  <div class="neck-scroll"><svg id="neck" role="img" aria-label="Halsdiagram med ackordets toner"></svg></div>
-  <p class="hint" id="neckHint"></p>
+<div id="tab-ackord" class="tabpanel" role="tabpanel" aria-labelledby="tabbtn-ackord">
+  <div class="panel">
+    <div class="row">
+      <label class="field">Stämning
+        <select id="tuning"></select>
+      </label>
+      <label class="field">Skala
+        <select id="mode"></select>
+      </label>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <div class="pills" id="roots"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="row">
+      <div class="pills" id="families"></div>
+    </div>
+  </div>
+
+  <div class="sec-head"><h2>Ackord i tonarten</h2><span id="scaleNotes"></span></div>
+  <div class="chordbar" id="chords"></div>
+
+  <div class="sec-head" style="margin-bottom:6px"><h2>Vanliga vändningar</h2></div>
+  <div class="prog" id="progs"></div>
 </div>
 
-<div class="sec-head"><h2>Ackord i tonarten</h2><span id="scaleNotes"></span></div>
-<div class="chordbar" id="chords"></div>
-
-<div class="sec-head" style="margin-bottom:6px"><h2>Vanliga vändningar</h2></div>
-<div class="prog" id="progs"></div>
-
-<div class="panel" style="margin-top:16px">
-  <div class="row">
-    <div class="pills" id="families"></div>
+<div id="tab-grepp" class="tabpanel" role="tabpanel" aria-labelledby="tabbtn-grepp" hidden>
+  <div class="panel">
+    <div class="neck-scroll"><svg id="neck" role="img" aria-label="Halsdiagram med ackordets toner"></svg></div>
+    <p class="hint" id="neckHint"></p>
   </div>
+
   <div class="row">
     <label class="toggle"><input type="checkbox" id="fOpen" checked> Minst en öppen sträng</label>
     <label class="toggle"><input type="checkbox" id="fBarre" checked> Undvik barré</label>
@@ -198,11 +222,11 @@ footer{margin-top:30px;font-size:12px;color:var(--ink-soft);border-top:1px solid
       </select>
     </label>
   </div>
-</div>
 
-<div class="sec-head"><h2 id="voicingTitle">Grepp</h2><span id="voicingCount"></span></div>
-<div class="grid" id="voicings"></div>
-<div id="noRes"></div>
+  <div class="sec-head"><h2 id="voicingTitle">Grepp</h2><span id="voicingCount"></span></div>
+  <div class="grid" id="voicings"></div>
+  <div id="noRes"></div>
+</div>
 
 <footer>
   Greppen genereras från stämningen: varje sträng får ligga öppen eller greppas på ett band vars ton hör till ackordet, med max fyra fingrar och max fem bands spännvidd. Tryck på ett grepp för att höra det.
@@ -274,7 +298,8 @@ const state={
   onlyOpen:true,
   noBarre:true,
   minPos:0,
-  sort:"open"
+  sort:"open",
+  tab:"ackord"
 };
 
 /* ---------- Ackord i tonarten ---------- */
@@ -639,7 +664,14 @@ function renderVoicings(){
   });
 }
 function renderAll(){
-  renderRoots(); renderChords(); renderProgs(); drawNeck(); renderVoicings();
+  renderRoots(); renderChords(); renderProgs(); drawNeck(); renderVoicings(); renderTabs();
+}
+function renderTabs(){
+  document.querySelectorAll(".tab").forEach(b=>{
+    b.setAttribute("aria-selected", b.dataset.tab===state.tab);
+  });
+  el("tab-ackord").hidden = state.tab!=="ackord";
+  el("tab-grepp").hidden = state.tab!=="grepp";
 }
 
 /* ---------- Init ---------- */
@@ -658,6 +690,10 @@ function renderAll(){
   el("fBarre").onchange=e=>{ state.noBarre=e.target.checked; renderVoicings(); };
   el("fPos").oninput=e=>{ state.minPos=+e.target.value; el("posLabel").textContent="band "+state.minPos; renderVoicings(); };
   el("sort").onchange=e=>{ state.sort=e.target.value; renderVoicings(); };
+
+  document.querySelectorAll(".tab").forEach(b=>{
+    b.onclick=()=>{ state.tab=b.dataset.tab; renderTabs(); };
+  });
 
   renderFamilies();
   renderAll();
