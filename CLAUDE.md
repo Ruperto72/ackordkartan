@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Vad det här är
 
-Ackordkartan är en enfilsapp (allt i [index.html](index.html)) som genererar gitarrgrepp i en vald tonart, med fokus på öppna klanger högt upp på halsen — inte bara barrégrepp i första läget. Ingen byggkedja, inga beroenden, inget ackordbibliotek: all musikteori och all greppsökning körs i webbläsaren i vanlig JavaScript.
+Ackordkartan är i grunden en enfilsapp (all musikteori, greppsökning och UI-logik i [index.html](index.html)) som genererar gitarrgrepp i en vald tonart, med fokus på öppna klanger högt upp på halsen — inte bara barrégrepp i första läget. Ingen byggkedja, inga beroenden, inget ackordbibliotek. Utöver `index.html` finns ett minimalt PWA-skal (`manifest.json`, `sw.js`, `icons/`) som gör appen installerbar på Android/Chrome — se "PWA" nedan.
 
 Repot är (ännu) inte initierat som git — `setup.sh` gör `git init` och skapar GitHub-repot i ett steg.
 
@@ -36,8 +36,12 @@ Allt UI-tillstånd hålls i det globala `state`-objektet (tuning, mode, root, ch
 
 Ljust/mörkt läge styrs enbart via CSS custom properties och `prefers-color-scheme` (ingen JS-togglelogik), med `[data-theme]`-attribut som manuell override-krok (används inte av appen själv idag).
 
+## PWA
+
+`manifest.json` + `sw.js` + `icons/icon-192.png`/`icon-512.png` gör appen installerbar via Chrome på Android ("Lägg till på startskärmen"). `sw.js` cache:ar appskalet (stale-while-revalidate: svarar med cachat innehåll direkt, uppdaterar cachen i bakgrunden) — **bumpa `CACHE_NAME` i `sw.js` när statiska filer ändras**, annars fastnar installerade instanser i gammal cache. `index.html` begär Screen Wake Lock vid start och återbegär den vid `visibilitychange`, så skärmen hålls tänd så länge appen är synlig (tyst fallback om API:t saknas/nekas).
+
 ## Att tänka på vid ändringar
 
-- Håll allt i `index.html` — det är en medveten designprincip, inte en tillfällig genväg.
+- All logik och rendering hålls i `index.html` — det är en medveten designprincip, inte en tillfällig genväg. PWA-skalet (manifest/service worker/ikoner) är de enda tillåtna undantagen, eftersom en service worker av webbläsarens säkerhetsmodell inte kan inlinas.
 - `findVoicings` är sensitiv för ordning: beskärningen i `dfs` (SPAN) och filtren i `evaluate` samverkar för att hålla sökrymden liten. Ändra ett villkor i taget och kontrollera att rimliga grepp (t.ex. öppna D-, C-, G-formen) fortfarande dyker upp.
 - Ändringar i `QUALITIES`/`buildChords()` måste hålla `qKey`-uppslaget konsekvent (intervall sorterade och normaliserade 0–11 relativt grundton).
