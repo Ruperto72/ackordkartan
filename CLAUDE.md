@@ -32,7 +32,7 @@ Allt ligger i [index.html](index.html): en `<style>`-block, markup, och ett enda
 5. **Rendering** — `diagram()` ritar ett enskilt greppdiagram som SVG-sträng; `drawNeck()` ritar hela halsdiagrammet (15 band) med skal- och ackordtoner; `render*()`-funktionerna (`renderRoots`, `renderChords`, `renderFamilies`, `renderProgs`, `renderVoicings`, `renderAll`, `renderTabs`) synkar DOM mot det globala `state`-objektet. UI:t är uppdelat i två flikar ("Ackord" för val av stämning/skala/rot/ackord, "Grepp" för halsdiagram/filter/greppkort), styrt av `state.tab` och `renderTabs()`.
 6. **Ljud** — `pluck()` syntetiserar en sträng med Karplus-Strong (brusigt ringbuffer-filter) via Web Audio, `strum()` spelar flera toner förskjutna i tid. Inget ljudmaterial laddas.
 
-Allt UI-tillstånd hålls i det globala `state`-objektet (tuning, mode, root, chord, family, onlyOpen, noBarre, minPos, sort). Varje `on*`-hanterare uppdaterar `state` och kallar om nödvändigt `renderChords()`/`drawNeck()`/`renderVoicings()` — det finns ingen reaktivitet, uppdateringarna är manuella och explicita.
+Allt UI-tillstånd hålls i det globala `state`-objektet (tuning, mode, root, chord, family, onlyOpen, noBarre, minPos, sort, tab). Varje `on*`-hanterare uppdaterar `state` och kallar om nödvändigt `renderChords()`/`drawNeck()`/`renderVoicings()` — det finns ingen reaktivitet, uppdateringarna är manuella och explicita.
 
 Ljust/mörkt läge styrs enbart via CSS custom properties och `prefers-color-scheme` (ingen JS-togglelogik), med `[data-theme]`-attribut som manuell override-krok (används inte av appen själv idag).
 
