@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ackordkartan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F2F3F0;
+  --panel:#FFFFFF;
+  --ink:#16302A;
+  --ink-soft:#5C6B64;
+  --line:#D9DCD5;
+  --line-strong:#B7BDB4;
+  --brass:#B0802A;
+  --brass-soft:#F0E4C8;
+  --nickel:#8E968F;
+  --shadow:0 1px 0 rgba(22,48,42,.06);
+  --radius:10px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#111614;
+    --panel:#182220;
+    --ink:#E6EBE6;
+    --ink-soft:#93A199;
+    --line:#26332F;
+    --line-strong:#3A4A44;
+    --brass:#D9A94A;
+    --brass-soft:#3A2F14;
+    --nickel:#6E7A73;
+    --shadow:none;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#111614; --panel:#182220; --ink:#E6EBE6; --ink-soft:#93A199;
+  --line:#26332F; --line-strong:#3A4A44; --brass:#D9A94A; --brass-soft:#3A2F14;
+  --nickel:#6E7A73; --shadow:none;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:"Instrument Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:15px;
+  line-height:1.45;
+  -webkit-text-size-adjust:100%;
+}
+.wrap{max-width:900px;margin:0 auto;padding:20px 16px 64px}
+h1{
+  font-family:"Instrument Serif",Georgia,serif;
+  font-weight:400;
+  font-size:34px;
+  line-height:1;
+  margin:0 0 2px;
+  letter-spacing:-.01em;
+}
+.tagline{color:var(--ink-soft);margin:0 0 20px;font-size:14px;max-width:52ch}
+.panel{
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  padding:14px;
+  margin-bottom:14px;
+  box-shadow:var(--shadow);
+}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.row + .row{margin-top:10px}
+label.field{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--ink-soft);flex:1 1 150px}
+select,input[type=range]{font:inherit;font-size:14px;color:var(--ink)}
+select{
+  background:var(--paper);
+  border:1px solid var(--line-strong);
+  border-radius:6px;
+  padding:7px 8px;
+  width:100%;
+}
+.pills{display:flex;flex-wrap:wrap;gap:6px}
+.pill{
+  font:inherit;font-size:13px;
+  background:transparent;
+  color:var(--ink);
+  border:1px solid var(--line-strong);
+  border-radius:999px;
+  padding:5px 11px;
+  cursor:pointer;
+}
+.pill[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.pill.small{font-size:12px;padding:4px 9px}
+.toggle{
+  display:inline-flex;align-items:center;gap:7px;
+  font-size:13px;color:var(--ink);cursor:pointer;
+  border:1px solid var(--line-strong);border-radius:6px;padding:6px 10px;
+}
+.toggle input{accent-color:var(--brass);margin:0}
+.neck-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -14px;padding:0 14px}
+.neck-scroll svg{display:block}
+.chordbar{display:flex;flex-wrap:wrap;gap:6px}
+.chip{
+  font:inherit;
+  background:var(--panel);
+  border:1px solid var(--line-strong);
+  border-radius:8px;
+  padding:7px 10px 6px;
+  cursor:pointer;
+  text-align:center;
+  min-width:62px;
+  color:var(--ink);
+}
+.chip .nm{font-family:"Instrument Serif",Georgia,serif;font-size:19px;line-height:1.05;display:block}
+.chip .rn{font-size:10.5px;color:var(--ink-soft);letter-spacing:.02em}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.chip[aria-pressed="true"] .rn{color:var(--nickel)}
+.sec-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:22px 0 8px}
+.sec-head h2{font-family:"Instrument Serif",Georgia,serif;font-weight:400;font-size:22px;margin:0}
+.sec-head span{font-size:12.5px;color:var(--ink-soft)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:10px}
+.card{
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  padding:8px 6px 9px;
+  text-align:center;
+  cursor:pointer;
+  position:relative;
+}
+.card:focus-visible,.pill:focus-visible,.chip:focus-visible,select:focus-visible,button:focus-visible{
+  outline:2px solid var(--brass);outline-offset:2px;
+}
+.card .cname{font-family:"Instrument Serif",Georgia,serif;font-size:20px;line-height:1.1}
+.card .cmeta{font-size:11px;color:var(--ink-soft);margin-top:3px}
+.card .tags{display:flex;gap:4px;justify-content:center;flex-wrap:wrap;margin-top:5px}
+.tag{font-size:10px;border:1px solid var(--line-strong);border-radius:999px;padding:1px 6px;color:var(--ink-soft)}
+.tag.open{background:var(--brass-soft);border-color:var(--brass);color:var(--brass)}
+.empty{border:1px dashed var(--line-strong);border-radius:var(--radius);padding:22px 16px;color:var(--ink-soft);font-size:14px}
+.prog{display:flex;flex-wrap:wrap;gap:6px}
+.prog button{
+  font:inherit;font-size:13px;background:var(--panel);color:var(--ink);
+  border:1px solid var(--line-strong);border-radius:8px;padding:7px 10px;cursor:pointer;
+}
+footer{margin-top:30px;font-size:12px;color:var(--ink-soft);border-top:1px solid var(--line);padding-top:12px}
+.hint{font-size:12px;color:var(--ink-soft);margin:6px 0 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Ackordkartan</h1>
+<p class="tagline">Välj tonart och ackord. Appen söker igenom hela halsen efter grepp som klingar med öppna strängar – inte bara barrégrepp i första läget.</p>
+
+<div class="panel">
+  <div class="row">
+    <label class="field">Stämning
+      <select id="tuning"></select>
+    </label>
+    <label class="field">Skala
+      <select id="mode"></select>
+    </label>
+  </div>
+  <div class="row" style="margin-top:12px">
+    <div class="pills" id="roots"></div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="neck-scroll"><svg id="neck" role="img" aria-label="Halsdiagram med ackordets toner"></svg></div>
+  <p class="hint" id="neckHint"></p>
+</div>
+
+<div class="sec-head"><h2>Ackord i tonarten</h2><span id="scaleNotes"></span></div>
+<div class="chordbar" id="chords"></div>
+
+<div class="sec-head" style="margin-bottom:6px"><h2>Vanliga vändningar</h2></div>
+<div class="prog" id="progs"></div>
+
+<div class="panel" style="margin-top:16px">
+  <div class="row">
+    <div class="pills" id="families"></div>
+  </div>
+  <div class="row">
+    <label class="toggle"><input type="checkbox" id="fOpen" checked> Minst en öppen sträng</label>
+    <label class="toggle"><input type="checkbox" id="fBarre" checked> Undvik barré</label>
+  </div>
+  <div class="row">
+    <label class="field">Lägsta läge: <b id="posLabel" style="color:var(--ink)">band 0</b>
+      <input type="range" id="fPos" min="0" max="9" value="0">
+    </label>
+    <label class="field">Sortering
+      <select id="sort">
+        <option value="open">Öppenhet, högt läge först</option>
+        <option value="pos">Läge, lågt till högt</option>
+        <option value="easy">Enklast att greppa</option>
+      </select>
+    </label>
+  </div>
+</div>
+
+<div class="sec-head"><h2 id="voicingTitle">Grepp</h2><span id="voicingCount"></span></div>
+<div class="grid" id="voicings"></div>
+<div id="noRes"></div>
+
+<footer>
+  Greppen genereras från stämningen: varje sträng får ligga öppen eller greppas på ett band vars ton hör till ackordet, med max fyra fingrar och max fem bands spännvidd. Tryck på ett grepp för att höra det.
+</footer>
+</div>
+
+<script>
+/* ---------- Musikteori ---------- */
+const SHARP=["C","C♯","D","D♯","E","F","F♯","G","G♯","A","A♯","B"];
+const FLAT =["C","D♭","D","E♭","E","F","G♭","G","A♭","A","B♭","B"];
+const FLAT_KEYS=new Set([1,3,5,8,10]);
+let useFlats=false;
+const nn=pc=>(useFlats?FLAT:SHARP)[((pc%12)+12)%12];
+
+const TUNINGS={
+  "Standard  E A D G B E":[40,45,50,55,59,64],
+  "Drop D  D A D G B E":[38,45,50,55,59,64],
+  "DADGAD":[38,45,50,55,57,62],
+  "Öppen G  D G D G B D":[38,43,50,55,59,62],
+  "Öppen D  D A D F♯ A D":[38,45,50,54,57,62],
+  "Ett halvt steg ned  E♭":[39,44,49,54,58,63],
+  "Ett helt steg ned  D":[38,43,48,53,57,62]
+};
+
+const MODES={
+  "Dur (jonisk)":[0,2,4,5,7,9,11],
+  "Moll (eolisk)":[0,2,3,5,7,8,10],
+  "Dorisk":[0,2,3,5,7,9,10],
+  "Mixolydisk":[0,2,4,5,7,9,10],
+  "Lydisk":[0,2,4,6,7,9,11],
+  "Frygisk":[0,1,3,5,7,8,10],
+  "Harmonisk moll":[0,2,3,5,7,8,11]
+};
+
+const QUALITIES=[
+  {iv:[0,4,7],       sfx:"",        fam:"treklang", min:false},
+  {iv:[0,3,7],       sfx:"m",       fam:"treklang", min:true},
+  {iv:[0,3,6],       sfx:"°",       fam:"treklang", min:true},
+  {iv:[0,4,8],       sfx:"+",       fam:"treklang", min:false},
+  {iv:[0,4,7,11],    sfx:"maj7",    fam:"septim",   min:false},
+  {iv:[0,3,7,10],    sfx:"m7",      fam:"septim",   min:true},
+  {iv:[0,4,7,10],    sfx:"7",       fam:"septim",   min:false},
+  {iv:[0,3,6,10],    sfx:"m7♭5",    fam:"septim",   min:true},
+  {iv:[0,3,6,9],     sfx:"°7",      fam:"septim",   min:true},
+  {iv:[0,4,8,11],    sfx:"maj7♯5",  fam:"septim",   min:false},
+  {iv:[0,2,7],       sfx:"sus2",    fam:"färg",     min:false},
+  {iv:[0,5,7],       sfx:"sus4",    fam:"färg",     min:false},
+  {iv:[0,5,7,10],    sfx:"7sus4",   fam:"färg",     min:false},
+  {iv:[0,4,7,9],     sfx:"6",       fam:"färg",     min:false},
+  {iv:[0,3,7,9],     sfx:"m6",      fam:"färg",     min:true},
+  {iv:[0,2,4,7],     sfx:"add9",    fam:"färg",     min:false},
+  {iv:[0,2,3,7],     sfx:"madd9",   fam:"färg",     min:true},
+  {iv:[0,2,4,7,11],  sfx:"maj9",    fam:"färg",     min:false},
+  {iv:[0,2,4,7,10],  sfx:"9",       fam:"färg",     min:false},
+  {iv:[0,2,3,7,10],  sfx:"m9",      fam:"färg",     min:true}
+];
+const qKey=a=>a.slice().sort((x,y)=>x-y).join(",");
+const QMAP=new Map(QUALITIES.map(q=>[qKey(q.iv),q]));
+
+const ROMAN=["I","♭II","II","♭III","III","IV","♭V","V","♭VI","VI","♭VII","VII"];
+
+/* ---------- Tillstånd ---------- */
+const state={
+  tuning:Object.keys(TUNINGS)[0],
+  mode:"Dur (jonisk)",
+  root:0,
+  chord:null,
+  family:"alla",
+  onlyOpen:true,
+  noBarre:true,
+  minPos:0,
+  sort:"open"
+};
+
+/* ---------- Ackord i tonarten ---------- */
+function scalePcs(){
+  return MODES[state.mode].map(i=>(state.root+i)%12);
+}
+function buildChords(){
+  const sc=MODES[state.mode], out=[];
+  for(let d=0;d<7;d++){
+    const degRoot=(state.root+sc[d])%12;
+    const degRel=sc[d];
+    const scaleSet=new Set(scalePcs());
+    // stapla terser inom skalan
+    const pick=k=>sc[(d+k)%7]+(d+k>=7?12:0);
+    const t3=pick(2)-sc[d], t5=pick(4)-sc[d], t7=pick(6)-sc[d];
+    const norm=x=>((x%12)+12)%12;
+    const cand=[
+      [0,norm(t3),norm(t5)],
+      [0,norm(t3),norm(t5),norm(t7)]
+    ];
+    // färgade varianter som håller sig i skalan
+    const extra=[[0,2,7],[0,5,7],[0,5,7,10],[0,norm(t3),norm(t5),9],
+                 [0,2,norm(t3),norm(t5)],[0,2,norm(t3),norm(t5),norm(t7)]];
+    for(const iv of extra){
+      if(iv.every(i=>scaleSet.has((degRoot+i)%12))) cand.push(iv);
+    }
+    for(const iv of cand){
+      const q=QMAP.get(qKey(iv));
+      if(!q) continue;
+      const name=nn(degRoot)+q.sfx;
+      if(out.some(c=>c.name===name)) continue;
+      let rn=ROMAN[degRel];
+      if(q.min) rn=rn.toLowerCase();
+      out.push({root:degRoot,iv:iv.slice().sort((a,b)=>a-b),sfx:q.sfx,fam:q.fam,name,roman:rn+(q.sfx==="°"||q.sfx==="°7"?"°":"")});
+    }
+  }
+  return out;
+}
+
+/* ---------- Greppsökning ---------- */
+function findVoicings(chord,opts){
+  const tuning=TUNINGS[opts.tuning];
+  const pcs=chord.iv.map(i=>(chord.root+i)%12);
+  const essential=chord.iv.filter(i=>i!==7).map(i=>(chord.root+i)%12);
+  const MAXFRET=15, SPAN=4;
+  const cand=tuning.map(open=>{
+    const c=[-1];
+    for(let f=0;f<=MAXFRET;f++) if(pcs.includes((open+f)%12)) c.push(f);
+    return c;
+  });
+  const res=[], cur=new Array(6);
+  (function dfs(s,lo,hi){
+    if(s===6){ evaluate(cur.slice()); return; }
+    for(const f of cand[s]){
+      let nlo=lo,nhi=hi;
+      if(f>0){
+        nlo=Math.min(lo,f); nhi=Math.max(hi,f);
+        if(nhi-nlo>SPAN) continue;
+      }
+      cur[s]=f;
+      dfs(s+1,nlo,nhi);
+    }
+  })(0,99,-1);
+
+  function evaluate(frets){
+    const sounding=[];
+    for(let s=0;s<6;s++) if(frets[s]>=0) sounding.push(s);
+    if(sounding.length<4) return;
+    // inga hål i mitten (max en dämpad innersträng)
+    let internal=0;
+    for(let s=sounding[0];s<=sounding[sounding.length-1];s++) if(frets[s]<0) internal++;
+    if(internal>1) return;
+    const notes=sounding.map(s=>tuning[s]+frets[s]);
+    const pcSet=new Set(notes.map(n=>n%12));
+    for(const e of essential) if(!pcSet.has(e)) return;
+    const fretted=sounding.filter(s=>frets[s]>0);
+    const uniq=[...new Set(fretted.map(s=>frets[s]))];
+    if(uniq.length>4) return;                      // fler än fyra fingrar
+    const minF=fretted.length?Math.min(...fretted.map(s=>frets[s])):0;
+    const maxF=fretted.length?Math.max(...fretted.map(s=>frets[s])):0;
+    const span=fretted.length?maxF-minF+1:0;
+    // barrégiltighet: strängar mellan två toner på samma band måste ligga högre
+    let barreWidth=1;
+    for(const f of uniq){
+      const ss=fretted.filter(s=>frets[s]===f);
+      if(ss.length<2) continue;
+      barreWidth=Math.max(barreWidth,ss[ss.length-1]-ss[0]+1);
+      for(let s=ss[0]+1;s<ss[ss.length-1];s++){
+        if(frets[s]<f) return;                     // omöjligt att barra över
+      }
+    }
+    const opens=sounding.filter(s=>frets[s]===0).length;
+    if(opts.onlyOpen && opens===0) return;
+    if(opts.noBarre && barreWidth>2) return;
+    if(minF<opts.minPos && !(fretted.length===0 && opts.minPos===0)) return;
+    const bassPc=notes[0]%12;
+    const rootInBass=bassPc===chord.root;
+    const score=
+      opens*4.2 +
+      Math.min(minF,9)*1.35 +
+      sounding.length*0.9 +
+      (rootInBass?2.2:0) -
+      span*1.4 -
+      internal*3 -
+      Math.max(0,uniq.length-1)*0.45 -
+      (barreWidth>2?2.5:0);
+    res.push({frets,notes,opens,minF,maxF,span,uniq:uniq.length,barreWidth,internal,
+      bass:bassPc,rootInBass,score,fretted:fretted.length});
+  }
+
+  // deduplicera och sprid över lägen
+  const seen=new Set(), uniqRes=[];
+  res.sort((a,b)=>b.score-a.score);
+  for(const v of res){
+    const k=v.frets.join(",");
+    if(seen.has(k)) continue;
+    seen.add(k); uniqRes.push(v);
+  }
+  let list;
+  if(opts.sort==="pos") list=uniqRes.slice().sort((a,b)=>a.minF-b.minF||b.score-a.score);
+  else if(opts.sort==="easy") list=uniqRes.slice().sort((a,b)=>(a.uniq+a.span*0.3)-(b.uniq+b.span*0.3)||b.opens-a.opens);
+  else{
+    const perPos={}, first=[], rest=[];
+    for(const v of uniqRes){
+      perPos[v.minF]=(perPos[v.minF]||0)+1;
+      (perPos[v.minF]<=3?first:rest).push(v);
+    }
+    list=first.concat(rest);
+  }
+  return list.slice(0,30);
+}
+
+/* ---------- Fingersättning ---------- */
+function fingering(v){
+  const f=v.frets, pairs=[];
+  for(let s=0;s<6;s++) if(f[s]>0) pairs.push([s,f[s]]);
+  const uniq=[...new Set(pairs.map(p=>p[1]))].sort((a,b)=>a-b);
+  const map={}; uniq.forEach((fr,i)=>map[fr]=i+1);
+  const out={}; pairs.forEach(([s,fr])=>out[s]=map[fr]);
+  return out;
+}
+
+/* ---------- Grafik: greppdiagram ---------- */
+function diagram(v){
+  const NF=5, W=126, L=17, R=10, sp=(W-L-R)/5;
+  const top=30, fh=21, H=top+NF*fh+20;
+  const f=v.frets;
+  const fr=[]; for(let s=0;s<6;s++) if(f[s]>0) fr.push(f[s]);
+  const minF=fr.length?Math.min(...fr):0, maxF=fr.length?Math.max(...fr):0;
+  let start=1;
+  if(maxF>NF) start=Math.max(1,Math.min(minF,maxF-NF+1));
+  const fg=fingering(v);
+  const x=s=>L+s*sp;
+  let g=`<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:${W}px;margin:0 auto" xmlns="http://www.w3.org/2000/svg">`;
+  // nut eller lägesmarkering
+  if(start===1){
+    g+=`<rect x="${L-1}" y="${top-4}" width="${W-L-R+2}" height="4" fill="var(--ink)"/>`;
+  }else{
+    g+=`<text x="${L-6}" y="${top+13}" text-anchor="end" font-size="9.5" fill="var(--ink-soft)" font-family="Instrument Sans,sans-serif">${start}</text>`;
+  }
+  for(let i=0;i<=NF;i++){
+    const y=top+i*fh;
+    g+=`<line x1="${L}" y1="${y}" x2="${W-R}" y2="${y}" stroke="var(--line-strong)" stroke-width="1"/>`;
+  }
+  for(let s=0;s<6;s++){
+    g+=`<line x1="${x(s)}" y1="${top}" x2="${x(s)}" y2="${top+NF*fh}" stroke="var(--line-strong)" stroke-width="${s===0?1.5:1}"/>`;
+  }
+  for(let s=0;s<6;s++){
+    if(f[s]<0) g+=`<text x="${x(s)}" y="${top-8}" text-anchor="middle" font-size="10" fill="var(--ink-soft)" font-family="Instrument Sans,sans-serif">×</text>`;
+    else if(f[s]===0) g+=`<circle cx="${x(s)}" cy="${top-11}" r="3.6" fill="none" stroke="var(--brass)" stroke-width="1.6"/>`;
+  }
+  for(let s=0;s<6;s++){
+    if(f[s]>0){
+      const y=top+(f[s]-start+0.5)*fh;
+      g+=`<circle cx="${x(s)}" cy="${y}" r="7.2" fill="var(--ink)"/>`;
+      g+=`<text x="${x(s)}" y="${y+3.4}" text-anchor="middle" font-size="9" fill="var(--paper)" font-family="Instrument Sans,sans-serif">${fg[s]}</text>`;
+    }
+  }
+  // tonnamn under
+  for(let s=0;s<6;s++){
+    if(f[s]<0) continue;
+    const pc=(TUNINGS[state.tuning][s]+f[s])%12;
+    const isOpen=f[s]===0;
+    g+=`<text x="${x(s)}" y="${top+NF*fh+13}" text-anchor="middle" font-size="8.5" fill="${isOpen?'var(--brass)':'var(--ink-soft)'}" font-family="Instrument Sans,sans-serif">${nn(pc)}</text>`;
+  }
+  return g+`</svg>`;
+}
+
+/* ---------- Grafik: hals ---------- */
+function drawNeck(){
+  const svg=document.getElementById("neck");
+  const NF=15, left=26, right=10, fw=34, top=16, sh=17, H=top+5*sh+26, W=left+NF*fw+right;
+  const tuning=TUNINGS[state.tuning];
+  const ch=state.chord;
+  const pcs=ch?ch.iv.map(i=>(ch.root+i)%12):[];
+  const sc=new Set(scalePcs());
+  let g="";
+  g+=`<rect x="${left}" y="${top-1}" width="${NF*fw}" height="${5*sh+2}" fill="var(--panel)"/>`;
+  for(let i=0;i<=NF;i++){
+    const x=left+i*fw;
+    g+=`<line x1="${x}" y1="${top}" x2="${x}" y2="${top+5*sh}" stroke="${i===0?'var(--ink)':'var(--line-strong)'}" stroke-width="${i===0?3:1}"/>`;
+  }
+  [3,5,7,9,12,15].forEach(n=>{
+    if(n>NF) return;
+    const x=left+(n-0.5)*fw;
+    g+=`<text x="${x}" y="${top+5*sh+15}" text-anchor="middle" font-size="9.5" fill="var(--ink-soft)" font-family="Instrument Sans,sans-serif">${n}</text>`;
+  });
+  for(let s=0;s<6;s++){
+    const y=top+(5-s)*sh;
+    g+=`<line x1="${left}" y1="${y}" x2="${left+NF*fw}" y2="${y}" stroke="var(--nickel)" stroke-width="${s===0?1.6:0.9}"/>`;
+    g+=`<text x="${left-8}" y="${y+3.2}" text-anchor="end" font-size="9" fill="var(--ink-soft)" font-family="Instrument Sans,sans-serif">${nn(tuning[s]%12)}</text>`;
+    for(let f=0;f<=NF;f++){
+      const pc=(tuning[s]+f)%12;
+      const inCh=pcs.includes(pc), inSc=sc.has(pc);
+      if(!inCh && !inSc) continue;
+      const x=f===0?left-0.5:left+(f-0.5)*fw;
+      if(inCh){
+        const isRoot=ch&&pc===ch.root;
+        const open=f===0;
+        g+=`<circle cx="${x}" cy="${y}" r="6.4" fill="${isRoot?'var(--brass)':'var(--ink)'}" ${open?'stroke="var(--brass)" stroke-width="1.6"':''}/>`;
+        g+=`<text x="${x}" y="${y+3}" text-anchor="middle" font-size="7.5" fill="var(--paper)" font-family="Instrument Sans,sans-serif">${nn(pc)}</text>`;
+      }else{
+        g+=`<circle cx="${x}" cy="${y}" r="2" fill="var(--line-strong)"/>`;
+      }
+    }
+  }
+  svg.setAttribute("viewBox",`0 0 ${W} ${H}`);
+  svg.setAttribute("width",W);
+  svg.setAttribute("height",H);
+  svg.innerHTML=g;
+  document.getElementById("neckHint").textContent=
+    ch?`${ch.name}: ${ch.iv.map(i=>nn((ch.root+i)%12)).join(" · ")}. Fyllda punkter är ackordstoner, ringade ligger på öppen sträng, brons är grundtonen.`
+      :"Små punkter visar skalans toner.";
+}
+
+/* ---------- Ljud ---------- */
+let ac=null;
+function ctx(){ if(!ac) ac=new (window.AudioContext||window.webkitAudioContext)(); return ac; }
+function pluck(midi,when,vol){
+  const c=ctx(), sr=c.sampleRate, f=440*Math.pow(2,(midi-69)/12);
+  const N=Math.max(2,Math.round(sr/f)), len=Math.floor(sr*2.4);
+  const buf=c.createBuffer(1,len,sr), d=buf.getChannelData(0);
+  const ring=new Float32Array(N);
+  for(let i=0;i<N;i++) ring[i]=Math.random()*2-1;
+  const decay=0.9955+0.0038*(1-Math.min(1,f/520));
+  let prev=0,p=0;
+  for(let i=0;i<len;i++){
+    const cu=ring[p];
+    d[i]=cu;
+    ring[p]=(cu+prev)*0.5*decay;
+    prev=cu; p=(p+1)%N;
+  }
+  const src=c.createBufferSource(); src.buffer=buf;
+  const lp=c.createBiquadFilter(); lp.type="lowpass"; lp.frequency.value=3800;
+  const g=c.createGain();
+  g.gain.setValueAtTime(0,when);
+  g.gain.linearRampToValueAtTime(vol,when+0.006);
+  g.gain.exponentialRampToValueAtTime(0.0001,when+2.3);
+  src.connect(lp).connect(g).connect(c.destination);
+  src.start(when); src.stop(when+2.4);
+}
+function strum(notes,at,spread){
+  const c=ctx(), t0=at??c.currentTime+0.02;
+  notes.forEach((n,i)=>pluck(n,t0+i*(spread??0.035),0.23));
+  return notes.length*(spread??0.035);
+}
+
+/* ---------- Rendering ---------- */
+function el(id){return document.getElementById(id);}
+
+function renderRoots(){
+  const box=el("roots"); box.innerHTML="";
+  for(let pc=0;pc<12;pc++){
+    const b=document.createElement("button");
+    b.className="pill"; b.textContent=nn(pc);
+    b.setAttribute("aria-pressed",pc===state.root);
+    b.onclick=()=>{ state.root=pc; useFlats=FLAT_KEYS.has(pc); state.chord=null; renderAll(); };
+    box.appendChild(b);
+  }
+}
+function renderFamilies(){
+  const box=el("families"); box.innerHTML="";
+  [["alla","Alla"],["treklang","Treklanger"],["septim","Septimackord"],["färg","Färgade"]].forEach(([k,lbl])=>{
+    const b=document.createElement("button");
+    b.className="pill small"; b.textContent=lbl;
+    b.setAttribute("aria-pressed",state.family===k);
+    b.onclick=()=>{ state.family=k; renderChords(); renderVoicings(); };
+    box.appendChild(b);
+  });
+}
+let CHORDS=[];
+function renderChords(){
+  CHORDS=buildChords();
+  const list=state.family==="alla"?CHORDS:CHORDS.filter(c=>c.fam===state.family);
+  if(!state.chord || !list.some(c=>c.name===state.chord.name)) state.chord=list[0];
+  const box=el("chords"); box.innerHTML="";
+  list.forEach(c=>{
+    const b=document.createElement("button");
+    b.className="chip";
+    b.innerHTML=`<span class="nm">${c.name}</span><span class="rn">${c.roman}</span>`;
+    b.setAttribute("aria-pressed",state.chord && c.name===state.chord.name);
+    b.onclick=()=>{ state.chord=c; renderChords(); drawNeck(); renderVoicings(); };
+    box.appendChild(b);
+  });
+  el("scaleNotes").textContent=scalePcs().map(nn).join(" ");
+}
+function renderProgs(){
+  const sc=MODES[state.mode];
+  const isMinor=[3,8,10].some(x=>sc.includes(x)&&sc.includes(3));
+  const sets = isMinor
+    ? [[0,5,6],[0,3,4],[0,6,5,6],[0,3,6,2],[0,5,2,6]]
+    : [[0,4,5,3],[0,3,4],[5,3,0,4],[1,4,0],[0,2,3,4]];
+  const box=el("progs"); box.innerHTML="";
+  sets.forEach(seq=>{
+    const chs=seq.map(d=>CHORDS.find(c=>c.roman.replace(/[°]/g,"").toLowerCase()===ROMAN[sc[d]].toLowerCase()) || CHORDS.find(c=>c.root===(state.root+sc[d])%12));
+    if(chs.some(c=>!c)) return;
+    const b=document.createElement("button");
+    b.textContent=chs.map(c=>c.name).join("  ›  ");
+    b.onclick=async()=>{
+      const c=ctx(); if(c.state==="suspended") await c.resume();
+      let t=c.currentTime+0.05;
+      chs.forEach(ch=>{
+        const v=findVoicings(ch,{...state,onlyOpen:false,noBarre:true,minPos:0,sort:"open"})[0];
+        if(v) strum(v.notes,t,0.028);
+        t+=1.0;
+      });
+    };
+    box.appendChild(b);
+  });
+}
+function renderVoicings(){
+  const ch=state.chord;
+  el("voicingTitle").textContent=ch?`Grepp för ${ch.name}`:"Grepp";
+  const box=el("voicings"), no=el("noRes");
+  box.innerHTML=""; no.innerHTML="";
+  if(!ch) return;
+  const list=findVoicings(ch,state);
+  el("voicingCount").textContent=list.length?`${list.length} varianter`:"";
+  if(!list.length){
+    no.innerHTML=`<div class="empty">Inga grepp med de här villkoren. Sänk kravet på läge, tillåt barré eller släpp kravet på öppen sträng.</div>`;
+    return;
+  }
+  list.forEach(v=>{
+    const card=document.createElement("button");
+    card.className="card";
+    const bassLbl=v.rootInBass?"":"/"+nn(v.bass);
+    const posLbl=v.minF===0?"öppet läge":"läge "+v.minF;
+    const tags=[];
+    if(v.opens) tags.push(`<span class="tag open">${v.opens} öppna</span>`);
+    if(v.barreWidth>2) tags.push(`<span class="tag">barré</span>`);
+    if(!v.rootInBass) tags.push(`<span class="tag">omvändning</span>`);
+    card.innerHTML=
+      `<div class="cname">${ch.name}${bassLbl}</div>`+
+      `<div class="cmeta">${posLbl} · ${v.fretted} finger${v.fretted===1?"":"rar"}</div>`+
+      diagram(v)+
+      `<div class="tags">${tags.join("")}</div>`;
+    card.onclick=async()=>{
+      const c=ctx(); if(c.state==="suspended") await c.resume();
+      strum(v.notes);
+    };
+    box.appendChild(card);
+  });
+}
+function renderAll(){
+  renderRoots(); renderChords(); renderProgs(); drawNeck(); renderVoicings();
+}
+
+/* ---------- Init ---------- */
+(function init(){
+  const ts=el("tuning");
+  Object.keys(TUNINGS).forEach(k=>{ const o=document.createElement("option"); o.value=k;o.textContent=k;ts.appendChild(o); });
+  ts.value=state.tuning;
+  ts.onchange=()=>{ state.tuning=ts.value; drawNeck(); renderVoicings(); };
+
+  const ms=el("mode");
+  Object.keys(MODES).forEach(k=>{ const o=document.createElement("option"); o.value=k;o.textContent=k;ms.appendChild(o); });
+  ms.value=state.mode;
+  ms.onchange=()=>{ state.mode=ms.value; state.chord=null; renderChords(); renderProgs(); drawNeck(); renderVoicings(); };
+
+  el("fOpen").onchange=e=>{ state.onlyOpen=e.target.checked; renderVoicings(); };
+  el("fBarre").onchange=e=>{ state.noBarre=e.target.checked; renderVoicings(); };
+  el("fPos").oninput=e=>{ state.minPos=+e.target.value; el("posLabel").textContent="band "+state.minPos; renderVoicings(); };
+  el("sort").onchange=e=>{ state.sort=e.target.value; renderVoicings(); };
+
+  renderFamilies();
+  renderAll();
+})();
+</script>
+</body>
+</html>
