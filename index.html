@@ -179,6 +179,23 @@ footer{margin-top:30px;font-size:12px;color:var(--ink-soft);border-top:1px solid
   cursor:pointer;
 }
 .filters[open] summary{margin-bottom:8px}
+.progrow{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:12px;margin-bottom:12px;box-shadow:var(--shadow)}
+.progname{font-family:"Instrument Serif",Georgia,serif;font-size:18px;margin-bottom:8px}
+.progchords{display:flex;gap:10px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px}
+.progchord{flex:0 0 auto;width:110px;text-align:center;position:relative}
+.progchord .cname{font-family:"Instrument Serif",Georgia,serif;font-size:16px;margin-bottom:2px}
+.prognav{display:flex;justify-content:center;gap:4px;margin-top:4px}
+.prognav button{
+  font:inherit;font-size:13px;background:var(--panel);color:var(--ink);
+  border:1px solid var(--line-strong);border-radius:6px;padding:2px 10px;cursor:pointer;
+}
+.progchord .rm{
+  position:absolute;top:-6px;right:2px;
+  width:18px;height:18px;border-radius:999px;
+  background:var(--ink);color:var(--paper);border:none;
+  font-size:11px;line-height:1;cursor:pointer;
+}
+.progbuilder{background:var(--panel);border:1px dashed var(--line-strong);border-radius:var(--radius);padding:12px;margin-bottom:12px}
 </style>
 </head>
 <body>
@@ -190,6 +207,7 @@ footer{margin-top:30px;font-size:12px;color:var(--ink-soft);border-top:1px solid
 <div class="tabs" role="tablist">
   <button class="tab" role="tab" id="tabbtn-ackord" aria-selected="true" data-tab="ackord">Ackord</button>
   <button class="tab" role="tab" id="tabbtn-grepp" aria-selected="false" data-tab="grepp">Grepp</button>
+  <button class="tab" role="tab" id="tabbtn-vandningar" aria-selected="false" data-tab="vandningar">Vändningar</button>
 </div>
 
 <div id="tab-ackord" class="tabpanel" role="tabpanel" aria-labelledby="tabbtn-ackord">
@@ -215,9 +233,6 @@ footer{margin-top:30px;font-size:12px;color:var(--ink-soft);border-top:1px solid
 
   <div class="sec-head"><h2>Ackord i tonarten</h2><span id="scaleNotes"></span></div>
   <div class="chordbar" id="chords"></div>
-
-  <div class="sec-head" style="margin-bottom:6px"><h2>Vanliga vändningar</h2></div>
-  <div class="prog" id="progs"></div>
 </div>
 
 <div id="tab-grepp" class="tabpanel" role="tabpanel" aria-labelledby="tabbtn-grepp" hidden>
@@ -249,6 +264,28 @@ footer{margin-top:30px;font-size:12px;color:var(--ink-soft);border-top:1px solid
   <div class="sec-head"><h2 id="voicingTitle">Grepp</h2><span id="voicingCount"></span></div>
   <div class="grid" id="voicings"></div>
   <div id="noRes"></div>
+</div>
+
+<div id="tab-vandningar" class="tabpanel" role="tabpanel" aria-labelledby="tabbtn-vandningar" hidden>
+  <div class="sec-head"><h2>Vanliga vändningar</h2></div>
+  <div id="progsBuiltin"></div>
+
+  <div class="sec-head">
+    <h2>Mina vändningar</h2>
+    <button class="pill small" id="newProgBtn">+ Ny vändning</button>
+  </div>
+
+  <div class="progbuilder" id="progBuilder" hidden>
+    <div id="builderChords"></div>
+    <div class="prog" style="margin-top:10px">
+      <button id="builderClear">Rensa</button>
+      <button id="builderSave">Spara</button>
+      <button id="builderCancel">Avbryt</button>
+    </div>
+    <div class="chordbar" id="builderChips" style="margin-top:10px"></div>
+  </div>
+
+  <div id="progsCustom"></div>
 </div>
 
 <footer>
@@ -322,8 +359,24 @@ const state={
   noBarre:true,
   minPos:0,
   sort:"open",
-  tab:"ackord"
+  tab:"ackord",
+  progVoicingIdx:{},
+  progBuilder:null
 };
+
+/* ---------- Sparade vändningar ---------- */
+const PROGS_KEY="ackordkartan:progressions";
+function loadSavedProgs(){
+  try{
+    const raw=localStorage.getItem(PROGS_KEY);
+    return raw?JSON.parse(raw):[];
+  }catch(err){ return []; }
+}
+function saveSavedProgs(list){
+  try{ localStorage.setItem(PROGS_KEY, JSON.stringify(list)); }
+  catch(err){ /* privat läge, full kvot o.dyl. — sparas bara i minnet denna session */ }
+}
+let savedProgs=loadSavedProgs();
 
 /* ---------- Ackord i tonarten ---------- */
 function scalePcs(){
@@ -465,8 +518,20 @@ function fingering(v){
   return out;
 }
 
+/* ---------- Grepp från sparade band (låsta vändningar) ---------- */
+function voicingFromFrets(frets,tuningName){
+  const tuning=TUNINGS[tuningName]||TUNINGS[state.tuning];
+  const notes=[];
+  for(let s=0;s<6;s++) if(frets[s]>=0) notes.push(tuning[s]+frets[s]);
+  return {frets,notes};
+}
+function progVoicings(chord){
+  return findVoicings(chord,{onlyOpen:false,noBarre:true,minPos:0,sort:"open",tuning:state.tuning});
+}
+
 /* ---------- Grafik: greppdiagram ---------- */
-function diagram(v){
+function diagram(v,tuningName){
+  const tuning=TUNINGS[tuningName]||TUNINGS[state.tuning];
   const NF=5, W=126, L=17, R=10, sp=(W-L-R)/5;
   const top=30, fh=21, H=top+NF*fh+20;
   const f=v.frets;
@@ -504,7 +569,7 @@ function diagram(v){
   // tonnamn under
   for(let s=0;s<6;s++){
     if(f[s]<0) continue;
-    const pc=(TUNINGS[state.tuning][s]+f[s])%12;
+    const pc=(tuning[s]+f[s])%12;
     const isOpen=f[s]===0;
     g+=`<text x="${x(s)}" y="${top+NF*fh+13}" text-anchor="middle" font-size="8.5" fill="${isOpen?'var(--brass)':'var(--ink-soft)'}" font-family="Instrument Sans,sans-serif">${nn(pc)}</text>`;
   }
@@ -599,7 +664,7 @@ function renderRoots(){
     const b=document.createElement("button");
     b.className="pill"; b.textContent=nn(pc);
     b.setAttribute("aria-pressed",pc===state.root);
-    b.onclick=()=>{ state.root=pc; useFlats=FLAT_KEYS.has(pc); state.chord=null; renderAll(); };
+    b.onclick=()=>{ state.root=pc; useFlats=FLAT_KEYS.has(pc); state.chord=null; state.progVoicingIdx={}; closeBuilder(); renderAll(); };
     box.appendChild(b);
   }
 }
@@ -629,29 +694,160 @@ function renderChords(){
   });
   el("scaleNotes").textContent=scalePcs().map(nn).join(" ");
 }
-function renderProgs(){
+function progRow(items,opts){
+  opts=opts||{};
+  const row=document.createElement("div");
+  row.className="progrow";
+  const chordsBox=document.createElement("div");
+  chordsBox.className="progchords";
+  items.forEach((it,i)=>{
+    const cell=document.createElement("div");
+    cell.className="progchord";
+    cell.innerHTML=`<div class="cname">${it.label}</div>`+
+      (it.voicing?diagram(it.voicing,it.tuning):`<div class="empty" style="padding:14px 4px;font-size:11px">Inget grepp</div>`);
+    if(opts.scrollable){
+      const nav=document.createElement("div"); nav.className="prognav";
+      const prev=document.createElement("button"); prev.textContent="‹"; prev.setAttribute("aria-label","Föregående grepp för "+it.label);
+      const next=document.createElement("button"); next.textContent="›"; next.setAttribute("aria-label","Nästa grepp för "+it.label);
+      prev.onclick=()=>opts.onScroll(i,-1);
+      next.onclick=()=>opts.onScroll(i,1);
+      nav.append(prev,next);
+      cell.appendChild(nav);
+    }
+    if(opts.onRemove){
+      const rm=document.createElement("button");
+      rm.className="rm"; rm.textContent="✕"; rm.setAttribute("aria-label","Ta bort "+it.label);
+      rm.onclick=()=>opts.onRemove(i);
+      cell.appendChild(rm);
+    }
+    chordsBox.appendChild(cell);
+  });
+  row.appendChild(chordsBox);
+
+  const actions=document.createElement("div");
+  actions.className="prog";
+  const play=document.createElement("button");
+  play.textContent="▶ Spela";
+  play.onclick=async()=>{
+    const c=ctx(); if(c.state==="suspended") await c.resume();
+    let t=c.currentTime+0.05;
+    items.forEach(it=>{
+      if(it.voicing) strum(it.voicing.notes,t,0.028);
+      t+=1.0;
+    });
+  };
+  actions.appendChild(play);
+  if(opts.onDelete){
+    const del=document.createElement("button");
+    del.textContent="🗑 Ta bort";
+    del.onclick=opts.onDelete;
+    actions.appendChild(del);
+  }
+  row.appendChild(actions);
+  return row;
+}
+function renderBuiltinProgs(){
   const sc=MODES[state.mode];
   const isMinor=[3,8,10].some(x=>sc.includes(x)&&sc.includes(3));
   const sets = isMinor
     ? [[0,5,6],[0,3,4],[0,6,5,6],[0,3,6,2],[0,5,2,6]]
     : [[0,4,5,3],[0,3,4],[5,3,0,4],[1,4,0],[0,2,3,4]];
-  const box=el("progs"); box.innerHTML="";
-  sets.forEach(seq=>{
+  const box=el("progsBuiltin"); box.innerHTML="";
+  sets.forEach((seq,row)=>{
     const chs=seq.map(d=>CHORDS.find(c=>c.roman.replace(/[°]/g,"").toLowerCase()===ROMAN[sc[d]].toLowerCase()) || CHORDS.find(c=>c.root===(state.root+sc[d])%12));
     if(chs.some(c=>!c)) return;
+    const items=chs.map((ch,i)=>{
+      const list=progVoicings(ch);
+      const key=row+"-"+i;
+      let idx=state.progVoicingIdx[key]||0;
+      if(idx>=list.length) idx=0;
+      return {label:ch.name, voicing:list[idx]};
+    });
+    box.appendChild(progRow(items,{
+      scrollable:true,
+      onScroll:(i,delta)=>{
+        const list=progVoicings(chs[i]);
+        if(!list.length) return;
+        const key=row+"-"+i;
+        const cur=state.progVoicingIdx[key]||0;
+        state.progVoicingIdx[key]=(cur+delta+list.length)%list.length;
+        renderBuiltinProgs();
+      }
+    }));
+  });
+}
+function renderCustomProgs(){
+  const box=el("progsCustom"); box.innerHTML="";
+  if(!savedProgs.length){
+    box.innerHTML=`<div class="empty">Inga sparade vändningar än. Tryck "+ Ny vändning" för att bygga en.</div>`;
+    return;
+  }
+  savedProgs.forEach(p=>{
+    const items=p.chords.map(c=>({label:c.name, voicing:voicingFromFrets(c.frets,p.tuning), tuning:p.tuning}));
+    const row=progRow(items,{
+      onDelete:()=>{
+        if(!confirm(`Ta bort vändningen "${p.name}"?`)) return;
+        savedProgs=savedProgs.filter(x=>x.id!==p.id);
+        saveSavedProgs(savedProgs);
+        renderCustomProgs();
+      }
+    });
+    const name=document.createElement("div");
+    name.className="progname";
+    name.textContent=p.name;
+    row.prepend(name);
+    box.appendChild(row);
+  });
+}
+function renderBuilderChips(){
+  const box=el("builderChips"); box.innerHTML="";
+  CHORDS.forEach(c=>{
     const b=document.createElement("button");
-    b.textContent=chs.map(c=>c.name).join("  ›  ");
-    b.onclick=async()=>{
-      const c=ctx(); if(c.state==="suspended") await c.resume();
-      let t=c.currentTime+0.05;
-      chs.forEach(ch=>{
-        const v=findVoicings(ch,{...state,onlyOpen:false,noBarre:true,minPos:0,sort:"open"})[0];
-        if(v) strum(v.notes,t,0.028);
-        t+=1.0;
-      });
+    b.className="chip";
+    b.innerHTML=`<span class="nm">${c.name}</span><span class="rn">${c.roman}</span>`;
+    b.onclick=()=>{
+      state.progBuilder.chords.push({chord:c, idx:0});
+      renderBuilder();
     };
     box.appendChild(b);
   });
+}
+function renderBuilder(){
+  if(!state.progBuilder) return;
+  const box=el("builderChords"); box.innerHTML="";
+  const entries=state.progBuilder.chords;
+  if(!entries.length){
+    box.innerHTML=`<div class="empty">Tryck på ett ackord nedan för att lägga till det i vändningen.</div>`;
+  }else{
+    const items=entries.map(entry=>{
+      const list=progVoicings(entry.chord);
+      if(entry.idx>=list.length) entry.idx=0;
+      return {label:entry.chord.name, voicing:list[entry.idx]};
+    });
+    box.appendChild(progRow(items,{
+      scrollable:true,
+      onRemove:i=>{ entries.splice(i,1); renderBuilder(); },
+      onScroll:(i,delta)=>{
+        const entry=entries[i];
+        const list=progVoicings(entry.chord);
+        if(!list.length) return;
+        entry.idx=(entry.idx+delta+list.length)%list.length;
+        renderBuilder();
+      }
+    }));
+  }
+  renderBuilderChips();
+}
+function openBuilder(){
+  state.progBuilder=state.progBuilder||{chords:[]};
+  el("progBuilder").hidden=false;
+  el("newProgBtn").hidden=true;
+  renderBuilder();
+}
+function closeBuilder(){
+  state.progBuilder=null;
+  el("progBuilder").hidden=true;
+  el("newProgBtn").hidden=false;
 }
 function renderVoicings(){
   const ch=state.chord;
@@ -687,7 +883,7 @@ function renderVoicings(){
   });
 }
 function renderAll(){
-  renderRoots(); renderChords(); renderProgs(); drawNeck(); renderVoicings(); renderTabs();
+  renderRoots(); renderChords(); renderBuiltinProgs(); renderCustomProgs(); drawNeck(); renderVoicings(); renderTabs();
 }
 function renderTabs(){
   document.querySelectorAll(".tab").forEach(b=>{
@@ -695,6 +891,7 @@ function renderTabs(){
   });
   el("tab-ackord").hidden = state.tab!=="ackord";
   el("tab-grepp").hidden = state.tab!=="grepp";
+  el("tab-vandningar").hidden = state.tab!=="vandningar";
 }
 
 /* ---------- Init ---------- */
@@ -702,12 +899,12 @@ function renderTabs(){
   const ts=el("tuning");
   Object.keys(TUNINGS).forEach(k=>{ const o=document.createElement("option"); o.value=k;o.textContent=k;ts.appendChild(o); });
   ts.value=state.tuning;
-  ts.onchange=()=>{ state.tuning=ts.value; drawNeck(); renderVoicings(); };
+  ts.onchange=()=>{ state.tuning=ts.value; state.progVoicingIdx={}; closeBuilder(); drawNeck(); renderVoicings(); renderBuiltinProgs(); };
 
   const ms=el("mode");
   Object.keys(MODES).forEach(k=>{ const o=document.createElement("option"); o.value=k;o.textContent=k;ms.appendChild(o); });
   ms.value=state.mode;
-  ms.onchange=()=>{ state.mode=ms.value; state.chord=null; renderChords(); renderProgs(); drawNeck(); renderVoicings(); };
+  ms.onchange=()=>{ state.mode=ms.value; state.chord=null; state.progVoicingIdx={}; closeBuilder(); renderChords(); renderBuiltinProgs(); drawNeck(); renderVoicings(); };
 
   el("fOpen").onchange=e=>{ state.onlyOpen=e.target.checked; renderVoicings(); };
   el("fBarre").onchange=e=>{ state.noBarre=e.target.checked; renderVoicings(); };
@@ -717,6 +914,32 @@ function renderTabs(){
   document.querySelectorAll(".tab").forEach(b=>{
     b.onclick=()=>{ state.tab=b.dataset.tab; renderTabs(); };
   });
+
+  el("newProgBtn").onclick=openBuilder;
+  el("builderClear").onclick=()=>{ state.progBuilder.chords=[]; renderBuilder(); };
+  el("builderCancel").onclick=closeBuilder;
+  el("builderSave").onclick=()=>{
+    const entries=state.progBuilder.chords;
+    if(entries.length<2){ alert("Lägg till minst två ackord innan du sparar."); return; }
+    const chordsData=[];
+    for(const entry of entries){
+      const list=progVoicings(entry.chord);
+      const v=list[entry.idx]||list[0];
+      if(!v){ alert(`Hittade inget spelbart grepp för ${entry.chord.name}.`); return; }
+      chordsData.push({name:entry.chord.name, frets:v.frets});
+    }
+    const name=prompt("Namn på vändningen?");
+    if(!name || !name.trim()) return;
+    savedProgs.push({
+      id: (crypto.randomUUID ? crypto.randomUUID() : Date.now()+"-"+Math.random().toString(36).slice(2)),
+      name: name.trim(),
+      tuning: state.tuning,
+      chords: chordsData
+    });
+    saveSavedProgs(savedProgs);
+    closeBuilder();
+    renderCustomProgs();
+  };
 
   renderFamilies();
   renderAll();
