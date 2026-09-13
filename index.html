@@ -220,7 +220,7 @@ select{
 <div class="tabs" role="tablist" id="tabs">
   <button class="tab" role="tab" id="tabbtn-ackord" aria-selected="true" tabindex="0" data-tab="ackord">Ackord</button>
   <button class="tab" role="tab" id="tabbtn-grepp" aria-selected="false" tabindex="-1" data-tab="grepp">Grepp</button>
-  <button class="tab" role="tab" id="tabbtn-vandningar" aria-selected="false" tabindex="-1" data-tab="vandningar">Vändningar</button>
+  <button class="tab" role="tab" id="tabbtn-vandningar" aria-selected="false" tabindex="-1" data-tab="vandningar">Ackordföljder</button>
 </div>
 
 <div id="tab-ackord" class="tabpanel" role="tabpanel" aria-labelledby="tabbtn-ackord">
@@ -261,7 +261,8 @@ select{
 
   <details class="filters">
     <summary>Filter</summary>
-    <div class="row" style="margin-top:10px">
+    <div class="row" style="margin-top:10px" id="bassRow"></div>
+    <div class="row">
       <label class="toggle"><input type="checkbox" id="fOpen" checked> Minst en öppen sträng</label>
       <label class="toggle"><input type="checkbox" id="fBarre" checked> Undvik barré</label>
     </div>
@@ -285,12 +286,12 @@ select{
 </div>
 
 <div id="tab-vandningar" class="tabpanel" role="tabpanel" aria-labelledby="tabbtn-vandningar" hidden>
-  <div class="sec-head"><h2>Vanliga vändningar</h2></div>
+  <div class="sec-head"><h2>Vanliga ackordföljder</h2></div>
   <div id="progsBuiltin"></div>
 
   <div class="sec-head">
-    <h2>Mina vändningar</h2>
-    <button class="pill small" id="newProgBtn">+ Ny vändning</button>
+    <h2>Mina ackordföljder</h2>
+    <button class="pill small" id="newProgBtn">+ Ny ackordföljd</button>
   </div>
 
   <div class="progbuilder" id="progBuilder" hidden>
@@ -366,6 +367,7 @@ const state={
   mode:"Dur (jonisk)",
   root:0,
   chord:null,
+  slashBass:null,
   family:"alla",
   onlyOpen:true,
   noBarre:true,
@@ -508,6 +510,7 @@ function findVoicings(chord,opts){
     if(opts.noBarre && barreWidth>2) return;
     if(minF<opts.minPos && !(fretted.length===0 && opts.minPos===0)) return;
     const bassPc=notes[0]%12;
+    if(opts.slashBass!=null && bassPc!==opts.slashBass) return; // slash-ackord: bastonen är tvingande
     const rootInBass=bassPc===chord.root;
     const score=
       opens*4.2 +
@@ -582,7 +585,7 @@ function diagram(v,tuningName){
   if(start===1){
     g+=`<rect x="${L-1}" y="${top-4}" width="${W-L-R+2}" height="4" fill="var(--ink)"/>`;
   }else{
-    g+=`<text x="${L-6}" y="${top+13}" text-anchor="end" font-size="9.5" fill="var(--ink-soft)" font-family="Instrument Sans,sans-serif">${start}</text>`;
+    g+=`<text x="${L-6}" y="${top+13}" text-anchor="end" font-size="11" font-weight="600" fill="var(--ink)" font-family="Instrument Sans,sans-serif">${start}</text>`;
   }
   for(let i=0;i<=NF;i++){
     const y=top+i*fh;
@@ -592,7 +595,11 @@ function diagram(v,tuningName){
     g+=`<line x1="${x(s)}" y1="${top}" x2="${x(s)}" y2="${top+NF*fh}" stroke="var(--line-strong)" stroke-width="${s===0?1.5:1}"/>`;
   }
   for(let s=0;s<6;s++){
-    if(f[s]<0) g+=`<text x="${x(s)}" y="${top-8}" text-anchor="middle" font-size="10" fill="var(--ink-soft)" font-family="Instrument Sans,sans-serif">×</text>`;
+    if(f[s]<0){
+      const cx=x(s), cy=top-11, d=3.6;
+      g+=`<line x1="${cx-d}" y1="${cy-d}" x2="${cx+d}" y2="${cy+d}" stroke="var(--ink-soft)" stroke-width="1.6"/>`;
+      g+=`<line x1="${cx-d}" y1="${cy+d}" x2="${cx+d}" y2="${cy-d}" stroke="var(--ink-soft)" stroke-width="1.6"/>`;
+    }
     else if(f[s]===0) g+=`<circle cx="${x(s)}" cy="${top-11}" r="3.6" fill="none" stroke="var(--brass)" stroke-width="1.6"/>`;
   }
   for(let s=0;s<6;s++){
@@ -700,7 +707,7 @@ function renderRoots(){
     const b=document.createElement("button");
     b.className="pill"; b.textContent=nn(pc);
     b.setAttribute("aria-pressed",pc===state.root);
-    b.onclick=()=>{ state.root=pc; state.chord=null; state.progVoicingIdx={}; closeBuilder(); renderAll(); };
+    b.onclick=()=>{ state.root=pc; state.chord=null; state.slashBass=null; state.progVoicingIdx={}; closeBuilder(); renderAll(); };
     box.appendChild(b);
   }
 }
@@ -718,7 +725,7 @@ let CHORDS=[];
 function renderChords(){
   CHORDS=buildChords();
   const list=state.family==="alla"?CHORDS:CHORDS.filter(c=>c.fam===state.family);
-  if(!state.chord || !list.some(c=>c.name===state.chord.name)) state.chord=list[0];
+  if(!state.chord || !list.some(c=>c.name===state.chord.name)){ state.chord=list[0]; state.slashBass=null; }
   const box=el("chords"); box.innerHTML="";
   let lastDeg=null;
   list.forEach(c=>{
@@ -733,7 +740,7 @@ function renderChords(){
     b.className="chip";
     b.innerHTML=`<span class="nm">${c.name}</span>`;
     b.setAttribute("aria-pressed",state.chord && c.name===state.chord.name);
-    b.onclick=()=>{ state.chord=c; state.tab="grepp"; renderChords(); drawNeck(); renderVoicings(); renderTabs(); };
+    b.onclick=()=>{ state.chord=c; state.slashBass=null; state.tab="grepp"; renderChords(); drawNeck(); renderVoicings(); renderTabs(); };
     box.appendChild(b);
   });
   el("scaleNotes").textContent=scalePcs().map(nn).join(" ");
@@ -829,14 +836,14 @@ function renderBuiltinProgs(){
 function renderCustomProgs(){
   const box=el("progsCustom"); box.innerHTML="";
   if(!savedProgs.length){
-    box.innerHTML=`<div class="empty">Inga sparade vändningar än. Tryck "+ Ny vändning" för att bygga en.</div>`;
+    box.innerHTML=`<div class="empty">Inga sparade ackordföljder än. Tryck "+ Ny ackordföljd" för att bygga en.</div>`;
     return;
   }
   savedProgs.forEach(p=>{
     const items=p.chords.map(c=>({label:c.name, voicing:voicingFromFrets(c.frets,p.tuning), tuning:p.tuning}));
     const row=progRow(items,{
       onDelete:()=>{
-        if(!confirm(`Ta bort vändningen "${p.name}"?`)) return;
+        if(!confirm(`Ta bort ackordföljden "${p.name}"?`)) return;
         savedProgs=savedProgs.filter(x=>x.id!==p.id);
         saveSavedProgs(savedProgs);
         renderCustomProgs();
@@ -867,7 +874,7 @@ function renderBuilder(){
   const box=el("builderChords"); box.innerHTML="";
   const entries=state.progBuilder.chords;
   if(!entries.length){
-    box.innerHTML=`<div class="empty">Tryck på ett ackord nedan för att lägga till det i vändningen.</div>`;
+    box.innerHTML=`<div class="empty">Tryck på ett ackord nedan för att lägga till det i ackordföljden.</div>`;
   }else{
     const items=entries.map(entry=>{
       const list=progVoicings(entry.chord);
@@ -899,9 +906,28 @@ function closeBuilder(){
   el("progBuilder").hidden=true;
   el("newProgBtn").hidden=false;
 }
+function renderBassRow(){
+  const box=el("bassRow");
+  const ch=state.chord;
+  box.innerHTML="";
+  if(!ch) return;
+  const tones=[...new Set(ch.iv.map(i=>(ch.root+i)%12))];
+  if(tones.length<2) return;
+  const opt=(pc,lbl)=>{
+    const b=document.createElement("button");
+    b.className="pill small"; b.textContent=lbl;
+    b.setAttribute("aria-pressed",(state.slashBass??ch.root)===pc);
+    b.onclick=()=>{ state.slashBass=pc===ch.root?null:pc; renderVoicings(); };
+    box.appendChild(b);
+  };
+  opt(ch.root,"Bas: "+nn(ch.root)+" (grundton)");
+  for(const pc of tones) if(pc!==ch.root) opt(pc,"Bas: "+nn(pc));
+}
 function renderVoicings(){
   const ch=state.chord;
-  el("voicingTitle").textContent=ch?`Grepp för ${ch.name}`:"Grepp";
+  renderBassRow();
+  const titleBassLbl=ch&&state.slashBass!=null?"/"+nn(state.slashBass):"";
+  el("voicingTitle").textContent=ch?`Grepp för ${ch.name}${titleBassLbl}`:"Grepp";
   const box=el("voicings"), no=el("noRes");
   box.innerHTML=""; no.innerHTML="";
   if(!ch) return;
@@ -919,7 +945,7 @@ function renderVoicings(){
     const tags=[];
     if(v.opens) tags.push(`<span class="tag open">${v.opens} öppna</span>`);
     if(v.barreWidth>2) tags.push(`<span class="tag">barré</span>`);
-    if(!v.rootInBass) tags.push(`<span class="tag">omvändning</span>`);
+    if(!v.rootInBass && state.slashBass==null) tags.push(`<span class="tag">omvändning</span>`);
     card.innerHTML=
       `<div class="cname">${ch.name}${bassLbl}</div>`+
       `<div class="cmeta">${posLbl} · ${v.fretted} finger${v.fretted===1?"":"rar"}</div>`+
@@ -956,7 +982,7 @@ function renderTabs(){
   const ms=el("mode");
   Object.keys(MODES).forEach(k=>{ const o=document.createElement("option"); o.value=k;o.textContent=k;ms.appendChild(o); });
   ms.value=state.mode;
-  ms.onchange=()=>{ state.mode=ms.value; state.chord=null; state.progVoicingIdx={}; closeBuilder(); renderChords(); renderBuiltinProgs(); drawNeck(); renderVoicings(); };
+  ms.onchange=()=>{ state.mode=ms.value; state.chord=null; state.slashBass=null; state.progVoicingIdx={}; closeBuilder(); renderChords(); renderBuiltinProgs(); drawNeck(); renderVoicings(); };
 
   el("fOpen").onchange=e=>{ state.onlyOpen=e.target.checked; renderVoicings(); };
   el("fBarre").onchange=e=>{ state.noBarre=e.target.checked; renderVoicings(); };
@@ -997,7 +1023,7 @@ function renderTabs(){
       if(!v){ alert(`Hittade inget spelbart grepp för ${entry.chord.name}.`); return; }
       chordsData.push({name:entry.chord.name, frets:v.frets});
     }
-    const name=prompt("Namn på vändningen?");
+    const name=prompt("Namn på ackordföljden?");
     if(!name || !name.trim()) return;
     savedProgs.push({
       id: (crypto.randomUUID ? crypto.randomUUID() : Date.now()+"-"+Math.random().toString(36).slice(2)),

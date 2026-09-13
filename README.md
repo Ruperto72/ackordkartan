@@ -4,9 +4,9 @@ En app som genererar gitarrgrepp i en vald tonart — med fokus på **öppna kla
 
 ## Skärmdumpar
 
-| Ackord | Grepp | Vändningar |
+| Ackord | Grepp | Ackordföljder |
 | --- | --- | --- |
-| [![Ackord-fliken: tonart, skala och ackordlista](screenshots/ackord.png)](screenshots/ackord.png) | [![Grepp-fliken: halsdiagram och greppkort för Cadd9](screenshots/grepp.png)](screenshots/grepp.png) | [![Vändningar-fliken: bläddringsbara ackordföljder, mörkt läge](screenshots/vandningar-dark.png)](screenshots/vandningar-dark.png) |
+| [![Ackord-fliken: tonart, skala och ackordlista](screenshots/ackord.png)](screenshots/ackord.png) | [![Grepp-fliken: halsdiagram och greppkort för Cadd9](screenshots/grepp.png)](screenshots/grepp.png) | [![Ackordföljder-fliken: bläddringsbara ackordföljder, mörkt läge](screenshots/vandningar-dark.png)](screenshots/vandningar-dark.png) |
 
 ## Så fungerar greppsökningen
 
@@ -26,9 +26,9 @@ Steg 4 är hela poängen: filtrera på "minst en öppen sträng" + lägsta läge
 - Sju skalor: dur, moll, dorisk, mixolydisk, lydisk, frygisk, harmonisk moll
 - Treklanger, septimackord och färgade ackord (sus2, sus4, 6, add9, 9, m9 …) filtrerade till det som håller sig i tonarten
 - Alternativa stämningar: standard, drop D, DADGAD, öppen G, öppen D, nedstämt ett halvt/helt steg
-- Tre flikar: **Ackord** (tonart/skala/ackordval), **Grepp** (halsdiagram, filter, greppkort) och **Vändningar**
+- Tre flikar: **Ackord** (tonart/skala/ackordval), **Grepp** (halsdiagram, filter, greppkort) och **Ackordföljder**
 - Halsdiagram som visar ackordstonerna mot skalan över 15 band
-- Vändningar: fem vanliga ackordföljder per tonart med bläddringsbara grepp per ackord, plus en byggare för egna vändningar som sparas i webbläsaren (låsta till de exakta grepp du valde)
+- Ackordföljder: fem vanliga ackordföljder per tonart med bläddringsbara grepp per ackord, plus en byggare för egna ackordföljder som sparas i webbläsaren (låsta till de exakta grepp du valde)
 - Uppspelning med Karplus-Strong-syntes via Web Audio, inget ljudmaterial att ladda
 - Följer systemets ljusa/mörka läge
 - Installerbar som app på Android/Chrome (PWA) och håller skärmen vaken medan appen är öppen
@@ -57,7 +57,7 @@ All teori, sökning och rendering ligger i `index.html`:
 | `findVoicings()` | sökningen och poängsättningen ovan |
 | `fingering()`, `voicingFromFrets()` | finger 1–4 efter bandordning; bygger ett grepp baklänges från sparade band |
 | `diagram()`, `drawNeck()` | SVG-rendering av greppdiagram respektive halsdiagram |
-| `progRow()`, `renderBuiltinProgs()`, `renderCustomProgs()` | Vändningar-fliken: delad radrendering, de fem inbyggda följderna, sparade/byggda egna |
+| `progRow()`, `renderBuiltinProgs()`, `renderCustomProgs()` | Ackordföljder-fliken: delad radrendering, de fem inbyggda följderna, sparade/byggda egna |
 | `pluck()`, `strum()` | Karplus-Strong |
 
 Utöver `index.html` finns ett litet PWA-skal som gör appen installerbar (Chrome/Android):
