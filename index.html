@@ -580,6 +580,28 @@ function voicingFromFrets(frets,tuningName){
 function progVoicings(chord,bassPc){
   return findVoicings(chord,{onlyOpen:false,noBarre:true,minPos:0,sort:"open",tuning:state.tuning,slashBass:bassPc??null});
 }
+const STYLE_PROGS=[
+  {key:"blues", name:"Blues", seqs:[
+    {label:"12-takters blues", seq:[
+      [0,"7"],[0,"7"],[0,"7"],[0,"7"],
+      [5,"7"],[5,"7"],[0,"7"],[0,"7"],
+      [7,"7"],[5,"7"],[0,"7"],[0,"7"]
+    ]},
+    {label:"8-takters blues", seq:[
+      [0,""],[0,""],[0,""],[0,""],
+      [5,"7"],[5,"7"],[0,""],[7,"7"]
+    ]}
+  ]},
+  {key:"rock", name:"Rock", seqs:[{seq:[[0,""],[10,""],[5,""]]}]},
+  {key:"punk", name:"Punk", seqs:[{seq:[[0,"5"],[5,"5"],[7,"5"]]}]},
+  {key:"country", name:"Country", seqs:[{seq:[[5,""],[2,"7"],[7,"7"],[0,""]]}]},
+  {key:"jazz", name:"Jazz", seqs:[{seq:[[2,"m7"],[7,"7"],[0,"maj7"]]}]},
+  {key:"bossa", name:"Bossa nova", seqs:[{seq:[[0,"maj7"],[9,"m7"],[2,"m7"],[7,"7"]]}]},
+  {key:"flamenco", name:"Flamenco", seqs:[{seq:[[1,""],[0,""],[8,""],[3,"",10]]}]},
+  {key:"spansk", name:"Spansk musik", seqs:[{seq:[[0,"m"],[10,""],[8,""],[7,""]]}]},
+  {key:"klassisk", name:"Klassisk musik", seqs:[{seq:[[0,""],[5,""],[0,"",7],[7,""],[0,""]]}]},
+  {key:"reggae", name:"Reggae", seqs:[{seq:[[0,"m"],[8,""],[7,"m"],[0,"m"]]}]}
+];
 
 /* ---------- Grafik: greppdiagram ---------- */
 function diagram(v,tuningName){
@@ -746,7 +768,40 @@ function renderProgStyles(){
     box.appendChild(b);
   });
 }
-function renderStyleProgs(){ /* implementeras i Task 3 */ }
+function renderStyleProgs(){
+  const box=el("progsStyle"); box.innerHTML="";
+  if(!state.progStyle) return;
+  const style=STYLE_PROGS.find(s=>s.key===state.progStyle);
+  if(!style) return;
+  style.seqs.forEach((entry,seqIdx)=>{
+    const chs=entry.seq.map(([deg,sfx])=>chordFromRootSfx((state.root+deg)%12,sfx));
+    const bassPcs=entry.seq.map(([,,bassDeg])=>bassDeg!=null?(state.root+bassDeg)%12:null);
+    const items=chs.map((ch,i)=>{
+      const list=progVoicings(ch,bassPcs[i]);
+      const key="style-"+style.key+"-"+seqIdx+"-"+i;
+      let idx=state.progVoicingIdx[key]||0;
+      if(idx>=list.length) idx=0;
+      const label=ch.name+(bassPcs[i]!=null?"/"+nn(bassPcs[i]):"");
+      return {label, voicing:list[idx]};
+    });
+    if(entry.label){
+      const h=document.createElement("div");
+      h.className="prog-title"; h.textContent=entry.label;
+      box.appendChild(h);
+    }
+    box.appendChild(progRow(items,{
+      scrollable:true,
+      onScroll:(i,delta)=>{
+        const list=progVoicings(chs[i],bassPcs[i]);
+        if(!list.length) return;
+        const key="style-"+style.key+"-"+seqIdx+"-"+i;
+        const cur=state.progVoicingIdx[key]||0;
+        state.progVoicingIdx[key]=(cur+delta+list.length)%list.length;
+        renderStyleProgs();
+      }
+    }));
+  });
+}
 let CHORDS=[];
 function renderChords(){
   CHORDS=buildChords();
@@ -1003,12 +1058,12 @@ function renderTabs(){
   const ts=el("tuning");
   Object.keys(TUNINGS).forEach(k=>{ const o=document.createElement("option"); o.value=k;o.textContent=k;ts.appendChild(o); });
   ts.value=state.tuning;
-  ts.onchange=()=>{ state.tuning=ts.value; state.progVoicingIdx={}; closeBuilder(); drawNeck(); renderVoicings(); renderBuiltinProgs(); };
+  ts.onchange=()=>{ state.tuning=ts.value; state.progVoicingIdx={}; closeBuilder(); drawNeck(); renderVoicings(); renderBuiltinProgs(); renderStyleProgs(); };
 
   const ms=el("mode");
   Object.keys(MODES).forEach(k=>{ const o=document.createElement("option"); o.value=k;o.textContent=k;ms.appendChild(o); });
   ms.value=state.mode;
-  ms.onchange=()=>{ state.mode=ms.value; state.chord=null; state.slashBass=null; state.progVoicingIdx={}; closeBuilder(); renderChords(); renderBuiltinProgs(); drawNeck(); renderVoicings(); };
+  ms.onchange=()=>{ state.mode=ms.value; state.chord=null; state.slashBass=null; state.progVoicingIdx={}; closeBuilder(); renderChords(); renderBuiltinProgs(); renderStyleProgs(); drawNeck(); renderVoicings(); };
 
   el("fOpen").onchange=e=>{ state.onlyOpen=e.target.checked; renderVoicings(); };
   el("fBarre").onchange=e=>{ state.noBarre=e.target.checked; renderVoicings(); };
