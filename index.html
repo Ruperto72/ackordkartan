@@ -125,6 +125,7 @@ select{
 .sec-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:22px 0 8px}
 .sec-head h2{font-family:"Instrument Serif",Georgia,serif;font-weight:400;font-size:22px;margin:0}
 .sec-head span{font-size:12.5px;color:var(--ink-soft)}
+.prog-title{font-family:"Instrument Serif",Georgia,serif;font-size:15px;margin:0 0 6px;color:var(--ink)}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:10px}
 .card{
   background:var(--panel);
@@ -286,6 +287,10 @@ select{
 </div>
 
 <div id="tab-vandningar" class="tabpanel" role="tabpanel" aria-labelledby="tabbtn-vandningar" hidden>
+  <div class="sec-head"><h2>Stilar</h2></div>
+  <div class="row"><div class="pills" id="progStyles"></div></div>
+  <div id="progsStyle"></div>
+
   <div class="sec-head"><h2>Vanliga ackordföljder</h2></div>
   <div id="progsBuiltin"></div>
 
@@ -375,6 +380,7 @@ const state={
   root:0,
   chord:null,
   slashBass:null,
+  progStyle:null,
   family:"alla",
   onlyOpen:true,
   noBarre:true,
@@ -728,6 +734,19 @@ function renderFamilies(){
     box.appendChild(b);
   });
 }
+function renderProgStyles(){
+  const box=el("progStyles"); box.innerHTML="";
+  [["blues","Blues"],["rock","Rock"],["punk","Punk"],["country","Country"],["jazz","Jazz"],
+   ["bossa","Bossa nova"],["flamenco","Flamenco"],["spansk","Spansk musik"],
+   ["klassisk","Klassisk musik"],["reggae","Reggae"]].forEach(([k,lbl])=>{
+    const b=document.createElement("button");
+    b.className="pill small"; b.textContent=lbl;
+    b.setAttribute("aria-pressed",state.progStyle===k);
+    b.onclick=()=>{ state.progStyle=state.progStyle===k?null:k; renderProgStyles(); renderStyleProgs(); };
+    box.appendChild(b);
+  });
+}
+function renderStyleProgs(){ /* implementeras i Task 3 */ }
 let CHORDS=[];
 function renderChords(){
   CHORDS=buildChords();
@@ -966,7 +985,7 @@ function renderVoicings(){
   });
 }
 function renderAll(){
-  renderRoots(); renderChords(); renderBuiltinProgs(); renderCustomProgs(); drawNeck(); renderVoicings(); renderTabs();
+  renderRoots(); renderChords(); renderBuiltinProgs(); renderCustomProgs(); renderProgStyles(); renderStyleProgs(); drawNeck(); renderVoicings(); renderTabs();
 }
 function renderTabs(){
   document.querySelectorAll(".tab").forEach(b=>{
