@@ -354,10 +354,17 @@ const QUALITIES=[
   {iv:[0,2,3,7],     sfx:"madd9",   fam:"färg",     min:true},
   {iv:[0,2,4,7,11],  sfx:"maj9",    fam:"färg",     min:false},
   {iv:[0,2,4,7,10],  sfx:"9",       fam:"färg",     min:false},
-  {iv:[0,2,3,7,10],  sfx:"m9",      fam:"färg",     min:true}
+  {iv:[0,2,3,7,10],  sfx:"m9",      fam:"färg",     min:true},
+  {iv:[0,7],         sfx:"5",       fam:"färg",     min:false}
 ];
 const qKey=a=>a.slice().sort((x,y)=>x-y).join(",");
 const QMAP=new Map(QUALITIES.map(q=>[qKey(q.iv),q]));
+const SFXMAP=new Map(QUALITIES.map(q=>[q.sfx,q.iv]));
+function chordFromRootSfx(root,sfx){
+  const iv=SFXMAP.get(sfx);
+  const q=QMAP.get(qKey(iv));
+  return {root,iv,sfx,fam:q.fam,name:nn(root)+sfx};
+}
 
 const ROMAN=["I","♭II","II","♭III","III","IV","♭V","V","♭VI","VI","♭VII","VII"];
 
@@ -564,8 +571,8 @@ function voicingFromFrets(frets,tuningName){
   for(let s=0;s<6;s++) if(frets[s]>=0) notes.push(tuning[s]+frets[s]);
   return {frets,notes};
 }
-function progVoicings(chord){
-  return findVoicings(chord,{onlyOpen:false,noBarre:true,minPos:0,sort:"open",tuning:state.tuning});
+function progVoicings(chord,bassPc){
+  return findVoicings(chord,{onlyOpen:false,noBarre:true,minPos:0,sort:"open",tuning:state.tuning,slashBass:bassPc??null});
 }
 
 /* ---------- Grafik: greppdiagram ---------- */
