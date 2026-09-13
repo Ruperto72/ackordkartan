@@ -360,7 +360,8 @@ const QUALITIES=[
   {iv:[0,2,4,7,11],  sfx:"maj9",    fam:"färg",     min:false},
   {iv:[0,2,4,7,10],  sfx:"9",       fam:"färg",     min:false},
   {iv:[0,2,3,7,10],  sfx:"m9",      fam:"färg",     min:true},
-  {iv:[0,7],         sfx:"5",       fam:"färg",     min:false}
+  {iv:[0,7],         sfx:"5",       fam:"färg",     min:false},
+  {iv:[0,4,9,10],    sfx:"13",      fam:"färg",     min:false}
 ];
 const qKey=a=>a.slice().sort((x,y)=>x-y).join(",");
 const QMAP=new Map(QUALITIES.map(q=>[qKey(q.iv),q]));
@@ -595,7 +596,20 @@ const STYLE_PROGS=[
   {key:"rock", name:"Rock", seqs:[{seq:[[0,""],[10,""],[5,""]]}]},
   {key:"punk", name:"Punk", seqs:[{seq:[[0,"5"],[5,"5"],[7,"5"]]}]},
   {key:"country", name:"Country", seqs:[{seq:[[5,""],[2,"7"],[7,"7"],[0,""]]}]},
-  {key:"jazz", name:"Jazz", seqs:[{seq:[[2,"m7"],[7,"7"],[0,"maj7"]]}]},
+  {key:"jazz", name:"Jazz", seqs:[
+    {label:"ii–V–I", seq:[[2,"m7"],[7,"7"],[0,"maj7"]]},
+    {label:"Moll ii–V–I", seq:[[2,"m7"],[7,"9"],[0,"6"]]},
+    {label:"Kromatisk ii–V–I", seq:[[8,"m7"],[7,"7"],[0,"maj7"]]},
+    {label:"I–ii–V–I (vändning)", seq:[[0,"7"],[2,"m7"],[7,"7"],[0,"7"]]},
+    {label:"vi–ii–V–I (vändning)", seq:[[9,"m7"],[2,"m7"],[7,"7"],[0,"7"]]},
+    {label:"Kromatisk dominantkedja", seq:[[0,"7"],[11,"7"],[10,"7"],[9,"7"]]},
+    {label:"I–ii–V", seq:[[0,"maj7"],[2,"m7"],[7,"7"]]},
+    {label:"Kromatisk nedgång", seq:[[0,"7"],[11,"m7♭5"],[10,"maj7"]]},
+    {label:"Bakdörrsvändning", seq:[[0,"maj7"],[7,"m7"],[0,"9"],[5,"maj7"]]},
+    {label:"Utökad ii–V–I", seq:[[2,"m7"],[7,"9"],[0,"maj7"],[4,"9"],[9,"13"]]},
+    {label:"Lång kromatisk vändning", seq:[[0,"7"],[6,"9"],[5,"9"],[11,"13"],[0,"13"],[7,"9"],[6,"9"],[5,"9"],[0,"7"]]},
+    {label:"12-takters jazzblues", seq:[[0,"7"],[5,"7"],[0,"7"],[0,"7"],[5,"7"],[5,"7"],[0,"7"],[9,"7"],[2,"m7"],[7,"7"],[0,"7"],[7,"7"]]}
+  ]},
   {key:"bossa", name:"Bossa nova", seqs:[{seq:[[0,"maj7"],[9,"m7"],[2,"m7"],[7,"7"]]}]},
   {key:"flamenco", name:"Flamenco", seqs:[{seq:[[1,""],[0,""],[8,""],[3,"",10]]}]},
   {key:"spansk", name:"Spansk musik", seqs:[{seq:[[0,"m"],[10,""],[8,""],[7,""]]}]},
