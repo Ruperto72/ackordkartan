@@ -1,4 +1,4 @@
-const CACHE_NAME = "ackordkartan-v8";
+const CACHE_NAME = "ackordkartan-v9";
 const APP_SHELL = [
   "./",
   "./index.html",

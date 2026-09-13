@@ -758,13 +758,11 @@ function renderFamilies(){
 }
 function renderProgStyles(){
   const box=el("progStyles"); box.innerHTML="";
-  [["blues","Blues"],["rock","Rock"],["punk","Punk"],["country","Country"],["jazz","Jazz"],
-   ["bossa","Bossa nova"],["flamenco","Flamenco"],["spansk","Spansk musik"],
-   ["klassisk","Klassisk musik"],["reggae","Reggae"]].forEach(([k,lbl])=>{
+  STYLE_PROGS.forEach(({key,name})=>{
     const b=document.createElement("button");
-    b.className="pill small"; b.textContent=lbl;
-    b.setAttribute("aria-pressed",state.progStyle===k);
-    b.onclick=()=>{ state.progStyle=state.progStyle===k?null:k; renderProgStyles(); renderStyleProgs(); };
+    b.className="pill small"; b.textContent=name;
+    b.setAttribute("aria-pressed",state.progStyle===key);
+    b.onclick=()=>{ state.progStyle=state.progStyle===key?null:key; renderProgStyles(); renderStyleProgs(); };
     box.appendChild(b);
   });
 }
@@ -785,7 +783,7 @@ function renderStyleProgs(){
       return {label, voicing:list[idx]};
     });
     if(entry.label){
-      const h=document.createElement("div");
+      const h=document.createElement("h3");
       h.className="prog-title"; h.textContent=entry.label;
       box.appendChild(h);
     }

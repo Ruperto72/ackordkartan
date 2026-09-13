@@ -28,7 +28,7 @@ Steg 4 är hela poängen: filtrera på "minst en öppen sträng" + lägsta läge
 - Alternativa stämningar: standard, drop D, DADGAD, öppen G, öppen D, nedstämt ett halvt/helt steg
 - Tre flikar: **Ackord** (tonart/skala/ackordval), **Grepp** (halsdiagram, filter, greppkort) och **Ackordföljder**
 - Halsdiagram som visar ackordstonerna mot skalan över 15 band
-- Ackordföljder: fem vanliga ackordföljder per tonart med bläddringsbara grepp per ackord, plus en byggare för egna ackordföljder som sparas i webbläsaren (låsta till de exakta grepp du valde)
+- Ackordföljder: fem vanliga ackordföljder per tonart med bläddringsbara grepp per ackord, en stilväljare med tio musikstilar (blues, rock, punk, country, jazz, bossa nova, flamenco, spansk musik, klassisk musik, reggae) — oberoende av vald skala — plus en byggare för egna ackordföljder som sparas i webbläsaren (låsta till de exakta grepp du valde)
 - Uppspelning med Karplus-Strong-syntes via Web Audio, inget ljudmaterial att ladda
 - Följer systemets ljusa/mörka läge
 - Installerbar som app på Android/Chrome (PWA) och håller skärmen vaken medan appen är öppen
@@ -57,7 +57,7 @@ All teori, sökning och rendering ligger i `index.html`:
 | `findVoicings()` | sökningen och poängsättningen ovan |
 | `fingering()`, `voicingFromFrets()` | finger 1–4 efter bandordning; bygger ett grepp baklänges från sparade band |
 | `diagram()`, `drawNeck()` | SVG-rendering av greppdiagram respektive halsdiagram |
-| `progRow()`, `renderBuiltinProgs()`, `renderCustomProgs()` | Ackordföljder-fliken: delad radrendering, de fem inbyggda följderna, sparade/byggda egna |
+| `progRow()`, `renderBuiltinProgs()`, `renderStyleProgs()`, `renderCustomProgs()` | Ackordföljder-fliken: delad radrendering, de fem inbyggda följderna, tio stilprogressioner (`STYLE_PROGS`, oberoende av vald skala), sparade/byggda egna |
 | `pluck()`, `strum()` | Karplus-Strong |
 
 Utöver `index.html` finns ett litet PWA-skal som gör appen installerbar (Chrome/Android):
