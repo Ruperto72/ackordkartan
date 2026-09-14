@@ -567,11 +567,22 @@ function findVoicings(chord,opts){
 
 /* ---------- Fingersättning ---------- */
 function fingering(v){
-  const f=v.frets, pairs=[];
-  for(let s=0;s<6;s++) if(f[s]>0) pairs.push([s,f[s]]);
-  const uniq=[...new Set(pairs.map(p=>p[1]))].sort((a,b)=>a-b);
-  const map={}; uniq.forEach((fr,i)=>map[fr]=i+1);
-  const out={}; pairs.forEach(([s,fr])=>out[s]=map[fr]);
+  const f=v.frets;
+  const byFret={};
+  for(let s=0;s<6;s++) if(f[s]>0) (byFret[f[s]]=byFret[f[s]]||[]).push(s);
+  // samma band delar bara finger om det går att barra över (strängarna emellan måste ligga lika högt eller högre) –
+  // annars är det två skilda fingrar som råkar hamna på samma band (t.ex. B7, Cm7)
+  const groups=[];
+  Object.keys(byFret).map(Number).forEach(fr=>{
+    const ss=byFret[fr];
+    let barrable=ss.length>1;
+    for(let s=ss[0]+1;barrable && s<ss[ss.length-1];s++) if(f[s]<fr) barrable=false;
+    if(barrable) groups.push({fret:fr,strings:ss});
+    else ss.forEach(s=>groups.push({fret:fr,strings:[s]}));
+  });
+  groups.sort((a,b)=>a.fret-b.fret);
+  const out={};
+  groups.forEach((g,i)=>g.strings.forEach(s=>out[s]=i+1));
   return out;
 }
 
@@ -585,7 +596,19 @@ function voicingFromFrets(frets,tuningName){
 function progVoicings(chord,bassPc){
   return findVoicings(chord,{onlyOpen:false,noBarre:true,minPos:0,sort:"open",tuning:state.tuning,slashBass:bassPc??null});
 }
+// Klassiska öppna grundformer (gitarr.org) för de rötter som faktiskt har en – gäller bara standardstämning.
+// Band låg E→hög E, -1=dämpad. Inget ackordbibliotek i övrigt: allt annat söks fram algoritmiskt som vanligt.
+const CLASSIC_OPEN={
+  0:{"":[-1,3,2,0,1,0],  "m":[-1,3,1,0,-1,-1], "7":[-1,3,2,3,1,0],  "maj7":[-1,3,2,0,0,0], "m7":[-1,3,1,3,-1,-1]}, // C
+  2:{"":[-1,-1,0,2,3,2], "m":[-1,-1,0,2,3,1],  "7":[-1,-1,0,2,1,2], "maj7":[-1,-1,0,2,2,2],"m7":[-1,-1,0,2,1,1]},  // D
+  4:{"":[0,2,2,1,0,0],   "m":[0,2,2,0,0,0],    "7":[0,2,0,1,0,0],   "maj7":[0,2,1,1,0,0],  "m7":[0,2,2,0,3,0]},   // E
+  5:{"":[-1,-1,3,2,1,1], "m":[-1,-1,3,1,1,1],  "7":[-1,-1,3,2,4,1], "maj7":[-1,-1,3,2,1,0]},                     // F (inget öppet m7)
+  7:{"":[3,2,0,0,0,3],   "m":[3,1,0,0,3,-1],   "7":[3,2,0,0,0,1],   "maj7":[3,-1,0,0,0,2]},                      // G (inget öppet m7)
+  9:{"":[-1,0,2,2,2,0],  "m":[-1,0,2,2,1,0],   "7":[-1,0,2,0,2,0],  "maj7":[-1,0,2,1,2,0], "m7":[-1,0,2,0,1,0]}   // A
+};
 function baseVoicing(chord){
+  const classic=CLASSIC_OPEN[chord.root]?.[chord.sfx];
+  if(classic && state.tuning==="Standard  E A D G B E") return voicingFromFrets(classic,state.tuning);
   const open=findVoicings(chord,{onlyOpen:true,noBarre:true,minPos:0,sort:"pos",tuning:state.tuning});
   if(open.length) return open[0];
   const low=findVoicings(chord,{onlyOpen:false,noBarre:true,minPos:0,sort:"pos",tuning:state.tuning});
