@@ -106,8 +106,9 @@ select{
 .toggle input{accent-color:var(--brass);margin:0}
 .neck-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -14px;padding:0 14px}
 .neck-scroll svg{display:block}
-.chordbar{display:flex;flex-wrap:wrap;gap:6px}
-.chip{
+.chordbar{display:flex;flex-wrap:wrap;gap:10px}
+.chip{width:96px;text-align:center}
+.chipname{
   font:inherit;
   background:var(--panel);
   border:1px solid var(--line-strong);
@@ -118,10 +119,13 @@ select{
   min-width:62px;
   color:var(--ink);
 }
-.chip .nm{font-family:"Instrument Serif",Georgia,serif;font-size:19px;line-height:1.05;display:block}
-.chip .rn{font-size:10.5px;color:var(--ink-soft);letter-spacing:.02em}
-.chip[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
-.chip[aria-pressed="true"] .rn{color:var(--nickel)}
+.chip .chipname{width:100%}
+.chipname .nm{font-family:"Instrument Serif",Georgia,serif;font-size:19px;line-height:1.05;display:block}
+.chipname .rn{font-size:10.5px;color:var(--ink-soft);letter-spacing:.02em}
+.chipname[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.chipname[aria-pressed="true"] .rn{color:var(--nickel)}
+.chipdiagram{margin-top:6px}
+.chip .empty{padding:14px 4px;font-size:10.5px;color:var(--ink-soft)}
 .sec-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:22px 0 8px}
 .sec-head h2{font-family:"Instrument Serif",Georgia,serif;font-weight:400;font-size:22px;margin:0}
 .sec-head span{font-size:12.5px;color:var(--ink-soft)}
@@ -137,7 +141,7 @@ select{
   position:relative;
   color:var(--ink);
 }
-.card:focus-visible,.pill:focus-visible,.chip:focus-visible,select:focus-visible,button:focus-visible,.tab:focus-visible,summary:focus-visible{
+.card:focus-visible,.pill:focus-visible,select:focus-visible,button:focus-visible,.tab:focus-visible,summary:focus-visible{
   outline:2px solid var(--brass);outline-offset:2px;
 }
 .card .cname{font-family:"Instrument Serif",Georgia,serif;font-size:20px;line-height:1.1}
@@ -581,6 +585,12 @@ function voicingFromFrets(frets,tuningName){
 function progVoicings(chord,bassPc){
   return findVoicings(chord,{onlyOpen:false,noBarre:true,minPos:0,sort:"open",tuning:state.tuning,slashBass:bassPc??null});
 }
+function baseVoicing(chord){
+  const open=findVoicings(chord,{onlyOpen:true,noBarre:true,minPos:0,sort:"pos",tuning:state.tuning});
+  if(open.length) return open[0];
+  const low=findVoicings(chord,{onlyOpen:false,noBarre:true,minPos:0,sort:"pos",tuning:state.tuning});
+  return low[0];
+}
 const STYLE_PROGS=[
   {key:"blues", name:"Blues", seqs:[
     {label:"12-takters blues", seq:[
@@ -829,12 +839,29 @@ function renderChords(){
       box.appendChild(lbl);
       lastDeg=c.deg;
     }
-    const b=document.createElement("button");
-    b.className="chip";
-    b.innerHTML=`<span class="nm">${c.name}</span>`;
-    b.setAttribute("aria-pressed",state.chord && c.name===state.chord.name);
-    b.onclick=()=>{ state.chord=c; state.slashBass=null; state.tab="grepp"; renderChords(); drawNeck(); renderVoicings(); renderTabs(); };
-    box.appendChild(b);
+    const cell=document.createElement("div");
+    cell.className="chip";
+    const nameBtn=document.createElement("button");
+    nameBtn.className="chipname";
+    nameBtn.innerHTML=`<span class="nm">${c.name}</span>`;
+    nameBtn.setAttribute("aria-pressed",state.chord && c.name===state.chord.name);
+    nameBtn.onclick=()=>{ state.chord=c; state.slashBass=null; state.tab="grepp"; renderChords(); drawNeck(); renderVoicings(); renderTabs(); };
+    cell.appendChild(nameBtn);
+    const v=baseVoicing(c);
+    if(v){
+      const dg=document.createElement("button");
+      dg.className="chipdiagram";
+      dg.setAttribute("aria-label","Spela "+c.name);
+      dg.innerHTML=diagram(v);
+      dg.onclick=async()=>{ const ac=ctx(); if(ac.state==="suspended") await ac.resume(); strum(v.notes); };
+      cell.appendChild(dg);
+    }else{
+      const empty=document.createElement("div");
+      empty.className="empty";
+      empty.textContent="Inget grundgrepp";
+      cell.appendChild(empty);
+    }
+    box.appendChild(cell);
   });
   el("scaleNotes").textContent=scalePcs().map(nn).join(" ");
 }
@@ -953,7 +980,7 @@ function renderBuilderChips(){
   const box=el("builderChips"); box.innerHTML="";
   CHORDS.forEach(c=>{
     const b=document.createElement("button");
-    b.className="chip";
+    b.className="chipname";
     b.innerHTML=`<span class="nm">${c.name}</span><span class="rn">${c.roman}</span>`;
     b.onclick=()=>{
       state.progBuilder.chords.push({chord:c, idx:0});
