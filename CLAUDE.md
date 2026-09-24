@@ -38,7 +38,7 @@ Allt UI-tillstånd hålls i det globala `state`-objektet (tuning, mode, root, ch
 
 ### Bygg och Följder
 
-Två flikar med olika jobb: **Bygg** är verktyget där man skriver en följd, **Följder** är biblioteket man spelar och lär av. Grundtonsväljaren finns i Ackord (`#roots`), Bygg (`#mapRoots`) och Följder (`#libRoots`) — samma `renderRoots()`, ett tillstånd.
+Två flikar med olika jobb: **Bygg** är verktyget där man skriver en följd, **Följder** är biblioteket man spelar och lär av. Grundtonsväljaren finns i Ackord (`#roots`), Grepp (`#neckRoots`), Bygg (`#mapRoots`) och Följder (`#libRoots`) — samma `renderRoots()`, ett tillstånd. I Grepp, Bygg och Följder ligger den alltid först i översta panelen, som små pills med skalans namn under (`#neckMode`/`#mapMode`/`#libMode`). Alla går via `setRoot(pc)`, som transponerar byggarens följd och låter valt ackord behålla skalsteg+kvalitet (G7 i C → A7 i D), så att Grepp-fliken visar motsvarande ackord i nya tonarten i stället för att hoppa till I.
 
 **Bygg** — överst **ackordkartan** (inspirerad av chord_files "Progressions"): tre rader à sju kolumner, en per skalsteg, byggda av `progMap()`:
 - **Sekundärdominanter** — dominantseptimackord en kvint över varje dur-/mollsteg (`V/ii` osv.), stavade från målets bokstav +4.

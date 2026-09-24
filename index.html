@@ -307,7 +307,9 @@ select{
 
 <div id="tab-grepp" class="tabpanel" role="tabpanel" aria-labelledby="tabbtn-grepp" hidden>
   <div class="panel">
-    <div class="neck-scroll"><svg id="neck" role="img" aria-label="Halsdiagram med ackordets toner"></svg></div>
+    <div class="pills" id="neckRoots" aria-label="Tonart"></div>
+    <p class="hint" id="neckMode"></p>
+    <div class="neck-scroll" style="margin-top:12px"><svg id="neck" role="img" aria-label="Halsdiagram med ackordets toner"></svg></div>
     <p class="hint" id="neckHint"></p>
   </div>
 
@@ -376,8 +378,9 @@ select{
 
 <div id="tab-foljder" class="tabpanel" role="tabpanel" aria-labelledby="tabbtn-foljder" hidden>
   <div class="panel">
-    <div class="pills" id="progStyles" aria-label="Samling"></div>
-    <div class="pills" id="libRoots" aria-label="Tonart" style="margin-top:12px"></div>
+    <div class="pills" id="libRoots" aria-label="Tonart"></div>
+    <p class="hint" id="libMode"></p>
+    <div class="pills" id="progStyles" aria-label="Samling" style="margin-top:12px"></div>
   </div>
   <div id="library"></div>
 </div>
@@ -954,17 +957,27 @@ function el(id){return document.getElementById(id);}
 // Grundtonsväljaren finns i Ackord, Bygg och Följder – samma tillstånd, samma hanterare.
 // Namnen stavas efter vald skala: D♭-dur men C♯-moll, B♭ men aldrig A♯.
 function renderRoots(){
-  ["roots","mapRoots","libRoots"].forEach(id=>{
+  ["roots","neckRoots","mapRoots","libRoots"].forEach(id=>{
     const box=el(id); box.innerHTML="";
     for(let pc=0;pc<12;pc++){
       const b=document.createElement("button");
-      b.className="pill"+(id==="mapRoots"?" small":""); b.textContent=spell(pc,keyLetter(pc,state.mode));
+      b.className="pill"+(id==="roots"?"":" small"); b.textContent=spell(pc,keyLetter(pc,state.mode));
       b.setAttribute("aria-pressed",pc===state.root);
-      b.onclick=()=>{ const old=state.root; state.root=pc; state.chord=null; state.slashBass=null; state.progVoicingIdx={}; transposeBuilder(old); renderAll(); };
+      b.onclick=()=>setRoot(pc);
       box.appendChild(b);
     }
   });
-  el("mapMode").textContent=state.mode+" · skalan byts under Ackord";
+  ["neckMode","mapMode","libMode"].forEach(id=>{ el(id).textContent=state.mode+" · skalan byts under Ackord"; });
+}
+// Byt grundton: följden i Bygg transponeras och valt ackord behåller skalsteg+kvalitet (G7 i C → A7 i D),
+// så att Grepp-fliken visar "samma" ackord i nya tonarten i stället för att hoppa till I.
+function setRoot(pc){
+  const old=state.root, keep=state.chord;
+  state.root=pc; state.slashBass=null; state.progVoicingIdx={};
+  transposeBuilder(old);
+  CHORDS=buildChords();
+  state.chord=keep?(CHORDS.find(c=>c.deg===keep.deg && c.sfx===keep.sfx)||null):null;
+  renderAll();
 }
 function renderFamilies(){
   const box=el("families"); box.innerHTML="";
