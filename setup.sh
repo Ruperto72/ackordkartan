@@ -6,6 +6,6 @@ git init -b main
 git add .
 git commit -m "Ackordkartan: greppgenerator för gitarr med öppna klanger på hela halsen"
 gh repo create "$REPO" --public --source=. --push \
-  --description "Genererar gitarrgrepp i vald tonart med fokus på öppna klanger högt upp på halsen"
+  --description "Gitarrgrepp med öppna klanger över hela halsen, en ackordkarta för att bygga följder (sekundärdominanter, lånade ackord) och ett bibliotek med stilar – en enfilsapp i webbläsaren, installerbar som PWA."
 gh repo edit --enable-issues --add-topic guitar --add-topic music-theory --add-topic web-audio --add-topic svg
 echo "Klart. Slå på Pages: gh api -X POST repos/:owner/$REPO/pages -f source[branch]=main -f source[path]=/"

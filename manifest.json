@@ -1,7 +1,7 @@
 {
   "name": "Ackordkartan",
   "short_name": "Ackordkartan",
-  "description": "Genererar gitarrgrepp i vald tonart, med fokus på öppna klanger högt upp på halsen.",
+  "description": "Gitarrgrepp med öppna klanger över hela halsen, en ackordkarta för att bygga följder (sekundärdominanter, lånade ackord) och ett bibliotek med stilar – en enfilsapp i webbläsaren, installerbar som PWA.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
