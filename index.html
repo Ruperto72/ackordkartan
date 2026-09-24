@@ -210,6 +210,11 @@ select{
 }
 .progbuilder{background:var(--panel);border:1px dashed var(--line-strong);border-radius:var(--radius);padding:12px;margin-bottom:12px}
 .morechords{margin-top:12px}
+.spice{border-left:2px solid var(--brass);padding-left:10px;margin:-4px 0 14px}
+.progchord.mark-sec .cname,.progchord.mark-bor .cname,.markkey{border:1px solid var(--brass);border-radius:6px;padding:0 4px}
+.progchord.mark-sec .cname,.markkey.sec{border-style:dashed}
+.markkey{font-size:11px}
+.prog button[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 .morechords summary{font-size:13px;color:var(--ink-soft);cursor:pointer}
 /* Ackordkartan: tre rader à sju kolumner, en kolumn per skalsteg */
 .mapscroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
@@ -297,6 +302,7 @@ select{
     <div class="row">
       <label class="toggle"><input type="checkbox" id="fOpen" checked> Minst en öppen sträng</label>
       <label class="toggle"><input type="checkbox" id="fBarre" checked> Undvik barré</label>
+      <label class="toggle"><input type="checkbox" class="fScale" checked> Visa skaltoner</label>
     </div>
     <div class="row">
       <label class="field">Lägsta läge: <b id="posLabel" style="color:var(--ink)">band 0</b>
@@ -336,6 +342,11 @@ select{
       <summary>Fler ackord i tonarten (sus, add9, 6 …)</summary>
       <div class="chordbar" id="builderChips" style="margin-top:10px"></div>
     </details>
+  </div>
+
+  <div class="row" style="margin-bottom:4px">
+    <label class="toggle"><input type="checkbox" class="fScale" checked> Visa skaltoner i greppen</label>
+    <span class="hint" style="margin:0">Små bronsprickar = skalans toner runt greppet, för fills och melodi.</span>
   </div>
 
   <div class="sec-head"><h2>Stilar</h2></div>
@@ -472,7 +483,9 @@ const state={
   sort:"open",
   tab:"ackord",
   progVoicingIdx:{},
-  progBuilder:null
+  progBuilder:null,
+  spiceOpen:{},
+  showScale:true
 };
 
 /* ---------- Sparade vändningar ---------- */
@@ -679,8 +692,47 @@ function voicingFromFrets(frets,tuningName){
   for(let s=0;s<6;s++) if(frets[s]>=0) notes.push(tuning[s]+frets[s]);
   return {frets,notes};
 }
+// Cachas per rot/kvalitet/bas/stämning – samma ackord söks om och om igen i kartan, varianter och "Samla i ett läge"
+const progVoicingCache=new Map();
 function progVoicings(chord,bassPc){
-  return findVoicings(chord,{onlyOpen:false,noBarre:true,minPos:0,sort:"open",tuning:state.tuning,slashBass:bassPc??null});
+  const key=chord.root+"|"+chord.sfx+"|"+(bassPc??"")+"|"+state.tuning;
+  if(!progVoicingCache.has(key))
+    progVoicingCache.set(key,findVoicings(chord,{onlyOpen:false,noBarre:true,minPos:0,sort:"open",tuning:state.tuning,slashBass:bassPc??null}));
+  return progVoicingCache.get(key);
+}
+/* ---------- Samla i ett läge ----------
+   Välj ett grepp per ackord så att handen flyttar sig så lite som möjligt genom hela följden (Viterbi över
+   greppistorna). Kostnad = skillnad i läge (medelband för greppade strängar) + lite per sträng som byter band,
+   plus en liten straffavgift för grepp långt ner i sökningens rangordning så att bra grepp vinner vid lika avstånd. */
+function vPos(v){ const f=v.frets.filter(x=>x>0); return f.length?f.reduce((a,b)=>a+b,0)/f.length:0; }
+function moveCost(a,b){
+  let c=Math.abs(vPos(a)-vPos(b));
+  for(let s=0;s<6;s++) if(a.frets[s]>0 && b.frets[s]>0) c+=0.12*Math.abs(a.frets[s]-b.frets[s]);
+  return c;
+}
+function gatherIdx(lists){
+  const out=lists.map(()=>0);
+  const idx=lists.map((l,i)=>i).filter(i=>lists[i].length);   // ackord utan grepp hoppas över
+  if(!idx.length) return out;
+  const RANK=0.05;
+  let cost=lists[idx[0]].map((v,j)=>j*RANK);
+  const back=[];
+  for(let k=1;k<idx.length;k++){
+    const prev=lists[idx[k-1]], cur=lists[idx[k]];
+    const nc=[], bk=[];
+    cur.forEach((v,j)=>{
+      let best=Infinity,bi=0;
+      prev.forEach((u,i)=>{ const c=cost[i]+moveCost(u,v); if(c<best){best=c;bi=i;} });
+      nc.push(best+j*RANK); bk.push(bi);
+    });
+    cost=nc; back.push(bk);
+  }
+  let j=cost.indexOf(Math.min(...cost));
+  for(let k=idx.length-1;k>=0;k--){
+    out[idx[k]]=j;
+    if(k>0) j=back[k-1][j];
+  }
+  return out;
 }
 // Klassiska öppna grundformer (gitarr.org) för de rötter som faktiskt har en – gäller bara standardstämning.
 // Band låg E→hög E, -1=dämpad. Inget ackordbibliotek i övrigt: allt annat söks fram algoritmiskt som vanligt.
@@ -737,7 +789,7 @@ const STYLE_PROGS=[
 ];
 
 /* ---------- Grafik: greppdiagram ---------- */
-function diagram(v,tuningName,chord){
+function diagram(v,tuningName,chord,withScale){
   const tuning=TUNINGS[tuningName]||TUNINGS[state.tuning];
   const NF=5, W=126, L=17, R=10, sp=(W-L-R)/5;
   const top=30, fh=21, H=top+NF*fh+20;
@@ -769,6 +821,14 @@ function diagram(v,tuningName,chord){
       g+=`<line x1="${cx-d}" y1="${cy+d}" x2="${cx+d}" y2="${cy-d}" stroke="var(--ink-soft)" stroke-width="1.6"/>`;
     }
     else if(f[s]===0) g+=`<circle cx="${x(s)}" cy="${top-11}" r="3.6" fill="none" stroke="var(--brass)" stroke-width="1.6"/>`;
+  }
+  // skaltoner i diagrammets bandfönster (små bronsprickar), som på chord_files-kartan
+  if(withScale){
+    const sc=new Set(scalePcs());
+    for(let s=0;s<6;s++) for(let fr=start;fr<start+NF;fr++){
+      if(fr===f[s] || !sc.has((tuning[s]+fr)%12)) continue;
+      g+=`<circle cx="${x(s)}" cy="${top+(fr-start+0.5)*fh}" r="3" fill="var(--brass)" opacity=".7"/>`;
+    }
   }
   for(let s=0;s<6;s++){
     if(f[s]>0){
@@ -910,32 +970,17 @@ function renderStyleProgs(){
   const style=STYLE_PROGS.find(s=>s.key===state.progStyle);
   if(!style) return;
   style.seqs.forEach((entry,seqIdx)=>{
-    const chs=entry.seq.map(([deg,sfx])=>chordFromRootSfx((state.root+deg)%12,sfx));
-    const bassPcs=entry.seq.map(([,,bassDeg])=>bassDeg!=null?(state.root+bassDeg)%12:null);
-    const items=chs.map((ch,i)=>{
-      const list=progVoicings(ch,bassPcs[i]);
-      const key="style-"+style.key+"-"+seqIdx+"-"+i;
-      let idx=state.progVoicingIdx[key]||0;
-      if(idx>=list.length) idx=0;
-      const label=ch.name+(bassPcs[i]!=null?"/"+chordPcName(ch,bassPcs[i]):"");
-      return {label, voicing:list[idx], chord:ch};
+    const seq=entry.seq.map(([deg,sfx,bassDeg])=>{
+      const chord=chordFromRootSfx((state.root+deg)%12,sfx);
+      const bass=bassDeg!=null?(state.root+bassDeg)%12:null;
+      return {chord, bass, label:chord.name+(bass!=null?"/"+chordPcName(chord,bass):"")};
     });
     if(entry.label){
       const h=document.createElement("h3");
       h.className="prog-title"; h.textContent=entry.label;
       box.appendChild(h);
     }
-    box.appendChild(progRow(items,{
-      scrollable:true,
-      onScroll:(i,delta)=>{
-        const list=progVoicings(chs[i],bassPcs[i]);
-        if(!list.length) return;
-        const key="style-"+style.key+"-"+seqIdx+"-"+i;
-        const cur=state.progVoicingIdx[key]||0;
-        state.progVoicingIdx[key]=(cur+delta+list.length)%list.length;
-        renderStyleProgs();
-      }
-    }));
+    box.appendChild(voicingRow(seq,i=>"style-"+style.key+"-"+seqIdx+"-"+i,renderStyleProgs));
   });
 }
 let CHORDS=[];
@@ -987,9 +1032,9 @@ function progRow(items,opts){
   chordsBox.className="progchords";
   items.forEach((it,i)=>{
     const cell=document.createElement("div");
-    cell.className="progchord";
+    cell.className="progchord"+(it.mark?" mark-"+it.mark:"");
     cell.innerHTML=`<div class="cname">${it.label}</div>`+
-      (it.voicing?`<button class="progdiagram" aria-label="Spela ${it.label}">${diagram(it.voicing,it.tuning,it.chord)}</button>`:`<div class="empty" style="padding:14px 4px;font-size:11px">Inget grepp</div>`);
+      (it.voicing?`<button class="progdiagram" aria-label="Spela ${it.label}">${diagram(it.voicing,it.tuning,it.chord,!!it.chord&&state.showScale)}</button>`:`<div class="empty" style="padding:14px 4px;font-size:11px">Inget grepp</div>`);
     if(it.voicing){
       cell.querySelector(".progdiagram").onclick=async()=>{
         const c=ctx(); if(c.state==="suspended") await c.resume();
@@ -1028,6 +1073,20 @@ function progRow(items,opts){
     });
   };
   actions.appendChild(play);
+  if(opts.onGather){
+    const gather=document.createElement("button");
+    gather.textContent="🎯 Samla i ett läge";
+    gather.title="Välj grepp så att handen flyttar sig så lite som möjligt";
+    gather.onclick=opts.onGather;
+    actions.appendChild(gather);
+  }
+  (opts.actions||[]).forEach(a=>{
+    const b=document.createElement("button");
+    b.textContent=a.text;
+    if(a.pressed!=null) b.setAttribute("aria-pressed",a.pressed);
+    b.onclick=a.onclick;
+    actions.appendChild(b);
+  });
   if(opts.onDelete){
     const del=document.createElement("button");
     del.textContent="🗑 Ta bort";
@@ -1037,6 +1096,79 @@ function progRow(items,opts){
   row.appendChild(actions);
   return row;
 }
+// Bläddringsbar ackordföljd där greppvalet minns i state.progVoicingIdx under keyFn(i).
+// seq: [{chord, bass?, label?, mark?}] – mark ("sec"/"bor") ramar in insatta ackord i Krydda-varianterna.
+function voicingRow(seq,keyFn,rerender,opts){
+  const lists=seq.map(e=>progVoicings(e.chord,e.bass));
+  const items=seq.map((e,i)=>{
+    let idx=state.progVoicingIdx[keyFn(i)]||0;
+    if(idx>=lists[i].length) idx=0;
+    return {label:e.label||e.chord.name, voicing:lists[i][idx], chord:e.chord, mark:e.mark};
+  });
+  return progRow(items,{...opts,
+    scrollable:true,
+    onScroll:(i,delta)=>{
+      const list=lists[i];
+      if(!list.length) return;
+      const cur=state.progVoicingIdx[keyFn(i)]||0;
+      state.progVoicingIdx[keyFn(i)]=(cur+delta+list.length)%list.length;
+      rerender();
+    },
+    onGather:()=>{
+      gatherIdx(lists).forEach((j,i)=>{ state.progVoicingIdx[keyFn(i)]=j; });
+      rerender();
+    }
+  });
+}
+
+/* ---------- Krydda ----------
+   Varianter av en diatonisk följd enligt ackordkartans regler (jfr "Example in C" på chord_files-kartan):
+   - sekundärdominant: V/x sätts in direkt före sitt mål x (inte före I – V/I är bara V), efter ett huvudackord
+   - lånat ackord: ersätter samma skalsteg om det redan finns i följden (v→V), annars sätts det in mellan två av
+     I/IV/V (in från ett nav, ut till ett nav), helst precis före I; följden räknas som en slinga, så lånet kan
+     hamna sist och leda tillbaka till första ackordet
+   seq: [{chord, deg, kind:"main"|"sec"|"bor"}] */
+function spiceSec(seq,map){
+  for(let i=1;i<seq.length;i++){
+    const t=seq[i], p=seq[i-1];
+    if(t.kind!=="main" || t.deg===0 || p.kind!=="main") continue;
+    const sd=map.sec[t.deg];
+    if(!sd || sd.root===p.chord.root) continue;
+    return [...seq.slice(0,i),{chord:sd,deg:t.deg,kind:"sec"},...seq.slice(i)];
+  }
+  return null;
+}
+function spiceBor(seq,map){
+  // ♭VII först (dur), V (moll → lånat dur-V), sedan ♭VI, iv …; förminskade lån hoppas över
+  let c=[6,4,5,3,1,2].map(d=>map.bor[d]).find(c=>c && c.degTriad!=="°");
+  if(!c) return null;
+  // följer följdens form: treklanger får ett lånat treklangsackord (B♭, inte B♭7)
+  if(seq.every(e=>e.kind!=="main" || e.chord.fam==="treklang"))
+    c={...c, ...chordFromRootSfx(c.root,c.degTriad,c.letter)};
+  const lent={chord:c,deg:c.deg,kind:"bor"};
+  // finns skalsteget redan i följden: byt ut det (v→V i moll, IV→iv i dur) – det är själva lånet
+  const same=seq.map(e=>e.kind==="main" && e.deg===c.deg).lastIndexOf(true);
+  if(same>=0) return seq.map((e,i)=>i===same?lent:e);
+  const hub=e=>e.kind==="main" && MAP_HUBS.includes(e.deg);
+  const n=seq.length;
+  let best=-1;
+  for(let i=1;i<=n;i++){
+    if(!hub(seq[i-1]) || !hub(seq[i%n])) continue;
+    if(best<0 || (seq[i%n].deg===0 && seq[best%n].deg!==0)) best=i;
+  }
+  if(best<0) return null;
+  return [...seq.slice(0,best),lent,...seq.slice(best)];
+}
+function spiceVariants(seq){
+  const map=progMap(), out=[];
+  const sec=spiceSec(seq,map), bor=spiceBor(seq,map);
+  if(sec) out.push({label:"+ sekundärdominant", seq:sec});
+  if(bor) out.push({label:"+ lånat ackord", seq:bor});
+  const both=sec && spiceBor(sec,map);
+  if(both) out.push({label:"+ båda", seq:both});
+  return out;
+}
+
 function renderBuiltinProgs(){
   const sc=MODES[state.mode];
   const isMinor=sc.includes(3);
@@ -1044,27 +1176,30 @@ function renderBuiltinProgs(){
     ? [[0,5,6],[0,3,4],[0,6,5,6],[0,3,6,2],[0,5,2,6]]
     : [[0,4,5,3],[0,3,4],[5,3,0,4],[1,4,0],[0,2,3,4]];
   const box=el("progsBuiltin"); box.innerHTML="";
-  sets.forEach((seq,row)=>{
-    const chs=seq.map(d=>CHORDS.find(c=>c.roman.replace(/[°]/g,"").toLowerCase()===ROMAN[sc[d]].toLowerCase()) || CHORDS.find(c=>c.root===(state.root+sc[d])%12));
+  sets.forEach((degs,row)=>{
+    const chs=degs.map(d=>CHORDS.find(c=>c.roman.replace(/[°]/g,"").toLowerCase()===ROMAN[sc[d]].toLowerCase()) || CHORDS.find(c=>c.root===(state.root+sc[d])%12));
     if(chs.some(c=>!c)) return;
-    const items=chs.map((ch,i)=>{
-      const list=progVoicings(ch);
-      const key=row+"-"+i;
-      let idx=state.progVoicingIdx[key]||0;
-      if(idx>=list.length) idx=0;
-      return {label:ch.name, voicing:list[idx], chord:ch};
-    });
-    box.appendChild(progRow(items,{
-      scrollable:true,
-      onScroll:(i,delta)=>{
-        const list=progVoicings(chs[i]);
-        if(!list.length) return;
-        const key=row+"-"+i;
-        const cur=state.progVoicingIdx[key]||0;
-        state.progVoicingIdx[key]=(cur+delta+list.length)%list.length;
-        renderBuiltinProgs();
-      }
+    const seq=chs.map((chord,i)=>({chord,deg:degs[i],kind:"main"}));
+    const open=!!state.spiceOpen[row];
+    const variants=spiceVariants(seq);
+    box.appendChild(voicingRow(seq,i=>row+"-"+i,renderBuiltinProgs,{
+      actions:variants.length?[{text:"✨ Krydda", pressed:open, onclick:()=>{ state.spiceOpen[row]=!open; renderBuiltinProgs(); }}]:[]
     }));
+    if(!open) return;
+    const wrap=document.createElement("div");
+    wrap.className="spice";
+    variants.forEach((v,vi)=>{
+      const h=document.createElement("h3");
+      h.className="prog-title"; h.textContent=v.label;
+      wrap.appendChild(h);
+      wrap.appendChild(voicingRow(v.seq.map(e=>({chord:e.chord, mark:e.kind==="main"?null:e.kind})),
+        i=>"spice-"+row+"-"+vi+"-"+i,renderBuiltinProgs));
+    });
+    const legend=document.createElement("p");
+    legend.className="hint";
+    legend.innerHTML=`<span class="markkey sec">streckad</span> = sekundärdominant, <span class="markkey bor">hel ram</span> = lånat ackord – samma regler som ackordkartan.`;
+    wrap.appendChild(legend);
+    box.appendChild(wrap);
   });
 }
 function renderCustomProgs(){
@@ -1118,6 +1253,10 @@ function renderBuilder(){
     box.appendChild(progRow(items,{
       scrollable:true,
       onRemove:i=>{ entries.splice(i,1); renderBuilder(); },
+      onGather:()=>{
+        gatherIdx(entries.map(e=>progVoicings(e.chord))).forEach((j,i)=>{ entries[i].idx=j; });
+        renderBuilder();
+      },
       onScroll:(i,delta)=>{
         const entry=entries[i];
         const list=progVoicings(entry.chord);
@@ -1282,7 +1421,7 @@ function renderVoicings(){
     card.innerHTML=
       `<div class="cname">${ch.name}${bassLbl}</div>`+
       `<div class="cmeta">${posLbl} · ${v.fretted} finger${v.fretted===1?"":"rar"}</div>`+
-      diagram(v,undefined,ch)+
+      diagram(v,undefined,ch,state.showScale)+
       `<div class="tags">${tags.join("")}</div>`;
     card.onclick=async()=>{
       const c=ctx(); if(c.state==="suspended") await c.resume();
@@ -1321,6 +1460,11 @@ function renderTabs(){
   el("fBarre").onchange=e=>{ state.noBarre=e.target.checked; renderVoicings(); };
   el("fPos").oninput=e=>{ state.minPos=+e.target.value; el("posLabel").textContent="band "+state.minPos; renderVoicings(); };
   el("sort").onchange=e=>{ state.sort=e.target.value; renderVoicings(); };
+  document.querySelectorAll(".fScale").forEach(cb=>cb.onchange=e=>{
+    state.showScale=e.target.checked;
+    document.querySelectorAll(".fScale").forEach(o=>o.checked=state.showScale);
+    renderVoicings(); renderBuiltinProgs(); renderStyleProgs(); renderBuilder();
+  });
 
   document.querySelectorAll(".tab").forEach(b=>{
     b.onclick=()=>{ state.tab=b.dataset.tab; renderTabs(); };
