@@ -59,13 +59,39 @@ body{
 h1{
   font-family:"Instrument Serif",Georgia,serif;
   font-weight:400;
-  font-size:34px;
+  font-size:26px;
   line-height:1;
-  margin:0 0 2px;
+  margin:0;
   letter-spacing:-.01em;
 }
-.tagline{color:var(--ink-soft);margin:0 0 20px;font-size:14px;max-width:52ch}
-.header-row{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.header-row{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}
+.intro{display:flex;gap:10px;align-items:flex-start;background:var(--brass-soft);border:1px solid var(--brass);border-radius:var(--radius);padding:10px 12px;margin-bottom:12px}
+.intro[hidden]{display:none}
+.intro p{margin:0;font-size:13.5px;flex:1}
+/* Flikar + tonartsrad klistrar mot skärmens överkant; tonarten gäller alla flikar */
+.topbar{position:sticky;top:0;z-index:6;background:var(--paper);margin:0 -16px 14px;padding:8px 16px}
+.keybar{display:flex;gap:6px;margin-top:8px}
+.keybtn,.keystep{
+  font:inherit;color:var(--ink);background:var(--panel);
+  border:1px solid var(--line-strong);border-radius:8px;cursor:pointer;
+}
+.keybtn{flex:1;min-width:0;padding:7px 10px;display:flex;align-items:baseline;justify-content:center;gap:8px;white-space:nowrap;overflow:hidden}
+.keybtn .k{font-family:"Instrument Serif",Georgia,serif;font-size:20px;line-height:1}
+.keybtn .t{font-size:12.5px;color:var(--ink-soft);overflow:hidden;text-overflow:ellipsis}
+.keystep{flex:0 0 44px;font-size:18px}
+/* Bottenark för tonart/skala/stämning */
+.sheet{
+  border:none;padding:14px 16px calc(18px + env(safe-area-inset-bottom));margin:auto auto 0;
+  width:100%;max-width:min(640px,100%);max-height:85vh;overflow:auto;
+  background:var(--panel);color:var(--ink);border-radius:14px 14px 0 0;
+  box-shadow:0 -8px 30px rgba(0,0,0,.2);
+}
+.sheet::backdrop{background:rgba(10,20,17,.45)}
+.sheethead{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.sheethead h2{font-family:"Instrument Serif",Georgia,serif;font-weight:400;font-size:24px;margin:0}
+.sheetlbl{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft);margin:14px 0 6px}
+.tuning-sub{font-size:10.5px;color:var(--ink-soft);margin-left:5px}
+.pill[aria-pressed="true"] .tuning-sub{color:var(--nickel)}
 .header-row .pill{flex:0 0 auto;white-space:nowrap}
 .panel{
   background:var(--panel);
@@ -156,7 +182,7 @@ select{
   border:1px solid var(--line-strong);border-radius:8px;padding:7px 10px;cursor:pointer;
 }
 .hint{font-size:12px;color:var(--ink-soft);margin:6px 0 0}
-.tabs{display:flex;gap:6px;margin-bottom:14px}
+.tabs{display:flex;gap:6px}
 .tab{
   flex:1;
   font:inherit;font-size:14px;font-weight:500;
@@ -164,7 +190,7 @@ select{
   color:var(--ink);
   border:1px solid var(--line-strong);
   border-radius:8px;
-  padding:9px 12px;
+  padding:8px 6px;
   cursor:pointer;
   text-align:center;
 }
@@ -210,7 +236,7 @@ select{
 }
 .morechords{margin:0 0 14px;padding:0 2px}
 /* Grepp: ackordval (skalsteg + typ) och grepp grupperade efter läge */
-.degrow{display:grid;grid-template-columns:repeat(7,minmax(38px,1fr));gap:4px;margin-top:12px}
+.degrow{display:grid;grid-template-columns:repeat(7,minmax(38px,1fr));gap:4px}
 .degbtn{
   font:inherit;color:var(--ink);background:var(--panel);
   border:1px solid var(--line-strong);border-radius:8px;padding:3px 2px 4px;cursor:pointer;
@@ -288,35 +314,30 @@ select{
 <div class="wrap">
 
 <div class="header-row">
-  <div>
-    <h1>Ackordkartan</h1>
-    <p class="tagline">Välj tonart och ackord. Appen söker igenom hela halsen efter grepp som klingar med öppna strängar – inte bara barrégrepp i första läget.</p>
-  </div>
+  <h1>Ackordkartan</h1>
   <button class="pill small" id="themeToggle" aria-label="Byt tema"></button>
 </div>
 
+<div class="intro" id="intro" hidden>
+  <p>Välj tonart och ackord. Appen söker igenom hela halsen efter grepp som klingar med öppna strängar – inte bara barrégrepp i första läget.</p>
+  <button class="pill small" id="introClose">OK</button>
+</div>
+
+<div class="topbar">
 <div class="tabs" role="tablist" id="tabs">
   <button class="tab" role="tab" id="tabbtn-ackord" aria-selected="true" tabindex="0" data-tab="ackord">Ackord</button>
   <button class="tab" role="tab" id="tabbtn-grepp" aria-selected="false" tabindex="-1" data-tab="grepp">Grepp</button>
   <button class="tab" role="tab" id="tabbtn-bygg" aria-selected="false" tabindex="-1" data-tab="bygg">Bygg</button>
   <button class="tab" role="tab" id="tabbtn-foljder" aria-selected="false" tabindex="-1" data-tab="foljder">Följder</button>
 </div>
+<div class="keybar">
+  <button class="keystep" id="keyDown" aria-label="Ett halvt steg ned">‹</button>
+  <button class="keybtn" id="keyBtn" aria-haspopup="dialog" aria-controls="keySheet"></button>
+  <button class="keystep" id="keyUp" aria-label="Ett halvt steg upp">›</button>
+</div>
+</div>
 
 <div id="tab-ackord" class="tabpanel" role="tabpanel" aria-labelledby="tabbtn-ackord">
-  <div class="panel">
-    <div class="row">
-      <label class="field">Stämning
-        <select id="tuning"></select>
-      </label>
-      <label class="field">Skala
-        <select id="mode"></select>
-      </label>
-    </div>
-    <div class="row" style="margin-top:12px">
-      <div class="pills" id="roots"></div>
-    </div>
-  </div>
-
   <div class="panel">
     <div class="row">
       <div class="pills" id="families"></div>
@@ -329,8 +350,6 @@ select{
 
 <div id="tab-grepp" class="tabpanel" role="tabpanel" aria-labelledby="tabbtn-grepp" hidden>
   <div class="panel">
-    <div class="pills" id="neckRoots" aria-label="Tonart"></div>
-    <p class="hint" id="neckMode"></p>
     <div class="degrow" id="greppDegrees" aria-label="Skalsteg"></div>
     <div class="varrow" id="greppVariants" aria-label="Ackordtyp"></div>
     <div class="neck-scroll" style="margin-top:12px"><svg id="neck" role="img" aria-label="Halsdiagram med ackordets toner"></svg></div>
@@ -371,9 +390,7 @@ select{
 
 <div id="tab-bygg" class="tabpanel" role="tabpanel" aria-labelledby="tabbtn-bygg" hidden>
   <div class="panel">
-    <div class="pills" id="mapRoots" aria-label="Tonart"></div>
-    <p class="hint" id="mapMode"></p>
-    <div class="mapscroll" style="margin-top:12px"><div class="mapinner" id="progMap"></div></div>
+    <div class="mapscroll"><div class="mapinner" id="progMap"></div></div>
     <p class="hint" id="mapHint"></p>
   </div>
 
@@ -402,15 +419,27 @@ select{
 
 <div id="tab-foljder" class="tabpanel" role="tabpanel" aria-labelledby="tabbtn-foljder" hidden>
   <div class="panel">
-    <div class="pills" id="libRoots" aria-label="Tonart"></div>
-    <p class="hint" id="libMode"></p>
-    <div class="pills" id="progStyles" aria-label="Samling" style="margin-top:12px"></div>
+    <div class="pills" id="progStyles" aria-label="Samling"></div>
   </div>
   <div id="library"></div>
 </div>
 </div>
 
 </div>
+
+<dialog class="sheet" id="keySheet" aria-labelledby="keySheetTitle">
+  <div class="sheethead">
+    <h2 id="keySheetTitle">Tonart</h2>
+    <button class="pill small" id="keySheetClose">Klar</button>
+  </div>
+  <div class="sheetlbl">Grundton</div>
+  <div class="pills" id="sheetRoots"></div>
+  <div class="sheetlbl">Skala</div>
+  <div class="pills" id="sheetModes"></div>
+  <p class="hint" id="sheetScale"></p>
+  <div class="sheetlbl">Stämning</div>
+  <div class="pills" id="sheetTunings"></div>
+</dialog>
 
 <script>
 /* ---------- Musikteori ---------- */
@@ -980,20 +1009,62 @@ function strum(notes,at,spread){
 /* ---------- Rendering ---------- */
 function el(id){return document.getElementById(id);}
 
-// Grundtonsväljaren finns i Ackord, Bygg och Följder – samma tillstånd, samma hanterare.
-// Namnen stavas efter vald skala: D♭-dur men C♯-moll, B♭ men aldrig A♯.
+/* ---------- Tonart ----------
+   En gemensam tonartsrad under flikarna (klistrar i överkant): ‹ › stegar grundtonen ett halvt steg, knappen i mitten
+   öppnar ett bottenark (<dialog>) med grundton, skala och stämning. Valen i arket gäller direkt; arket stängs med
+   Klar, Esc eller tryck utanför. */
+const MODE_SHORT={"Dur (jonisk)":"dur","Moll (eolisk)":"moll","Dorisk":"dorisk","Mixolydisk":"mixolydisk","Lydisk":"lydisk","Frygisk":"frygisk","Harmonisk moll":"harmonisk moll"};
+const tuningName=t=>t.split("  ")[0];
+const tuningNotes=t=>t.split("  ")[1]||"";
+function keyName(pc=state.root,mode=state.mode){
+  const r=spell(pc,keyLetter(pc,mode)), m=MODE_SHORT[mode]||mode;
+  return (m==="dur"||m==="moll")?r+"-"+m:r+" "+m;
+}
 function renderRoots(){
-  ["roots","neckRoots","mapRoots","libRoots"].forEach(id=>{
-    const box=el(id); box.innerHTML="";
-    for(let pc=0;pc<12;pc++){
-      const b=document.createElement("button");
-      b.className="pill"+(id==="roots"?"":" small"); b.textContent=spell(pc,keyLetter(pc,state.mode));
-      b.setAttribute("aria-pressed",pc===state.root);
-      b.onclick=()=>setRoot(pc);
-      box.appendChild(b);
-    }
+  el("keyBtn").innerHTML=`<span class="k">${keyName()}</span><span class="t">${tuningName(state.tuning)} ▾</span>`;
+  el("keyBtn").setAttribute("aria-label",`Tonart ${keyName()}, stämning ${tuningName(state.tuning)}. Byt`);
+  renderKeySheet();
+}
+function renderKeySheet(){
+  const roots=el("sheetRoots"); roots.innerHTML="";
+  for(let pc=0;pc<12;pc++){
+    const b=document.createElement("button");
+    b.className="pill"; b.textContent=spell(pc,keyLetter(pc,state.mode));
+    b.setAttribute("aria-pressed",pc===state.root);
+    b.onclick=()=>setRoot(pc);
+    roots.appendChild(b);
+  }
+  const modes=el("sheetModes"); modes.innerHTML="";
+  Object.keys(MODES).forEach(m=>{
+    const b=document.createElement("button");
+    b.className="pill small"; b.textContent=m;
+    b.setAttribute("aria-pressed",m===state.mode);
+    b.onclick=()=>setMode(m);
+    modes.appendChild(b);
   });
-  ["neckMode","mapMode","libMode"].forEach(id=>{ el(id).textContent=state.mode+" · skalan byts under Ackord"; });
+  el("sheetScale").textContent=keyName()+": "+scalePcs().map(nk).join(" ");
+  const tun=el("sheetTunings"); tun.innerHTML="";
+  Object.keys(TUNINGS).forEach(t=>{
+    const b=document.createElement("button");
+    b.className="pill small";
+    b.innerHTML=tuningName(t)+(tuningNotes(t)?`<span class="tuning-sub">${tuningNotes(t)}</span>`:"");
+    b.setAttribute("aria-pressed",t===state.tuning);
+    b.onclick=()=>setTuning(t);
+    tun.appendChild(b);
+  });
+}
+function setMode(m){
+  const keep=state.chord;
+  state.mode=m; state.slashBass=null; state.progVoicingIdx={};
+  transposeBuilder(state.root);
+  CHORDS=buildChords();
+  state.chord=keep?(CHORDS.find(c=>c.deg===keep.deg && c.sfx===keep.sfx)||CHORDS.find(c=>c.deg===keep.deg && c.fam===keep.fam)||null):null;
+  renderAll();
+}
+function setTuning(t){
+  state.tuning=t; state.progVoicingIdx={};
+  state.progBuilder.chords.forEach(e=>{ e.idx=0; });
+  renderRoots(); renderChords(); drawNeck(); renderVoicings(); renderBuilder(); renderLibrary();
 }
 // Byt grundton: följden i Bygg transponeras och valt ackord behåller skalsteg+kvalitet (G7 i C → A7 i D),
 // så att Grepp-fliken visar "samma" ackord i nya tonarten i stället för att hoppa till I.
@@ -1670,17 +1741,19 @@ window.addEventListener("pagehide",saveState);
 /* ---------- Init ---------- */
 (function init(){
   loadState();
-  const ts=el("tuning");
-  Object.keys(TUNINGS).forEach(k=>{ const o=document.createElement("option"); o.value=k;o.textContent=k;ts.appendChild(o); });
-  ts.value=state.tuning;
-  ts.onchange=()=>{ state.tuning=ts.value; state.progVoicingIdx={}; state.progBuilder.chords.forEach(e=>{ e.idx=0; }); drawNeck(); renderVoicings(); renderBuilder(); renderLibrary(); };
+  el("keyBtn").onclick=()=>{ renderKeySheet(); el("keySheet").showModal(); };
+  el("keySheetClose").onclick=()=>el("keySheet").close();
+  // tryck på bakgrunden stänger – jämför med arkets kant, annars stänger även ett tryck i arkets egen utfyllnad
+  el("keySheet").addEventListener("click",e=>{
+    const r=el("keySheet").getBoundingClientRect();
+    if(e.clientY<r.top || e.clientY>r.bottom || e.clientX<r.left || e.clientX>r.right) el("keySheet").close();
+  });
+  el("keyDown").onclick=()=>setRoot(mod12(state.root-1));
+  el("keyUp").onclick=()=>setRoot(mod12(state.root+1));
 
-  const ms=el("mode");
-  Object.keys(MODES).forEach(k=>{ const o=document.createElement("option"); o.value=k;o.textContent=k;ms.appendChild(o); });
-  ms.value=state.mode;
-  ms.onchange=()=>{ const keep=state.chord; state.mode=ms.value; state.slashBass=null; state.progVoicingIdx={}; transposeBuilder(state.root);
-    CHORDS=buildChords(); state.chord=keep?(CHORDS.find(c=>c.deg===keep.deg && c.sfx===keep.sfx)||CHORDS.find(c=>c.deg===keep.deg && c.fam===keep.fam)||null):null;
-    renderRoots(); renderChords(); renderBuilder(); renderLibrary(); drawNeck(); renderVoicings(); };
+  const INTRO_KEY="ackordkartan:introSeen";
+  try{ el("intro").hidden=localStorage.getItem(INTRO_KEY)==="1"; }catch(err){ el("intro").hidden=false; }
+  el("introClose").onclick=()=>{ el("intro").hidden=true; try{ localStorage.setItem(INTRO_KEY,"1"); }catch(err){ /* visas igen nästa gång */ } };
 
   el("fOpen").checked=state.onlyOpen;
   el("fBarre").checked=state.noBarre;
