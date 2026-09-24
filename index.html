@@ -1056,7 +1056,9 @@ function strum(notes,at,spread,vol){
    Ljudet schemaläggs i Web Audio med 0,25 s framförhållning (setInterval 60 ms); markeringen av ackordet
    som spelas sätts med setTimeout i takt med ljudet och letas upp via [data-play="<owner>"] vid varje steg,
    så den överlever omritningar. ↻ (state.loop) spelar tills man trycker ■. */
-const player={owner:null,timer:null,ui:[]};
+// gen räknas upp vid varje start/stopp: en uppspelning som startades före det senaste stoppet (t.ex. dubbeltryck
+// medan ljudet väcks, eller en timer vars handtag rensats ur player.ui) känner igen sig som inaktuell och gör inget.
+const player={owner:null,timer:null,ui:[],gen:0};
 function markStep(owner,i){
   document.querySelectorAll(`[data-play="${owner}"]`).forEach(box=>{
     box.querySelectorAll(".tchip,.progchord").forEach((c,j)=>c.classList.toggle("playing",j===i));
@@ -1073,7 +1075,7 @@ function stopPlayback(){
   if(player.timer) clearInterval(player.timer);
   player.ui.forEach(clearTimeout);
   const owner=player.owner;
-  player.timer=null; player.ui=[]; player.owner=null;
+  player.timer=null; player.ui=[]; player.owner=null; player.gen++;
   if(owner) markStep(owner,-1);
   updatePlayButtons();
 }
@@ -1081,24 +1083,28 @@ async function togglePlayback(owner,voicings){
   if(player.owner===owner){ stopPlayback(); return; }
   stopPlayback();
   if(!voicings.some(v=>v)) return;
-  const a=ctx(); if(a.state==="suspended") await a.resume();
-  const beat=60/state.bpm, per=state.beatsPerChord;
-  let next=a.currentTime+0.08, i=0;
+  // markera som spelande *före* await, så ett andra tryck under väntan på resume() stoppar i stället för att starta en till
+  const gen=player.gen;
   player.owner=owner;
   updatePlayButtons();
+  const a=ctx(); if(a.state==="suspended") await a.resume();
+  if(gen!==player.gen) return;   // stoppad eller ersatt medan ljudet väcktes
+  const beat=60/state.bpm, per=state.beatsPerChord;
+  let next=a.currentTime+0.08, i=0;
   const tick=()=>{
+    if(gen!==player.gen) return;
     while(next<a.currentTime+0.25){
       if(i>=voicings.length){
         if(!state.loop){
           clearInterval(player.timer); player.timer=null;
-          player.ui.push(setTimeout(stopPlayback,Math.max(0,(next-a.currentTime)*1000)));
+          player.ui.push(setTimeout(()=>{ if(gen===player.gen) stopPlayback(); },Math.max(0,(next-a.currentTime)*1000)));
           return;
         }
         i=0;
       }
       const v=voicings[i], at=next, step=i;
       if(v) for(let b=0;b<per;b++) strum(v.notes,at+b*beat,b===0?0.03:0.018,b===0?0.23:0.11);
-      player.ui.push(setTimeout(()=>markStep(owner,step),Math.max(0,(at-a.currentTime)*1000)));
+      player.ui.push(setTimeout(()=>{ if(gen===player.gen) markStep(owner,step); },Math.max(0,(at-a.currentTime)*1000)));
       if(player.ui.length>64) player.ui=player.ui.slice(-32);   // gamla, redan körda timers
       next+=per*beat; i++;
     }
@@ -1249,7 +1255,8 @@ function renderChords(){
   const shown=c=>!collapse || c.fam!=="färg" || state.colorOpen.has(c.deg) || (state.chord && state.chord.name===c.name);
   let lastDeg=null;
   const moreBtn=deg=>{
-    const n=list.filter(c=>c.deg===deg && c.fam==="färg").length;
+    // valt färgackord syns redan när steget är hopfällt – räknas inte som dolt
+    const n=list.filter(c=>c.deg===deg && c.fam==="färg" && !(state.chord && state.chord.name===c.name)).length;
     if(!collapse || !n) return;
     const open=state.colorOpen.has(deg);
     const b=document.createElement("button");
@@ -1975,6 +1982,7 @@ window.addEventListener("pagehide",saveState);
   el("bBor").onclick=()=>applySpice(spiceBor);
   el("bUndo").onclick=()=>{
     if(!state.builderUndo.length) return;
+    if(player.owner==="builder") stopPlayback();   // samma regel som builderEdit – annars spelas den gamla följden
     state.progBuilder.chords=state.builderUndo.pop();
     flashTray("");
     renderBuilder();
