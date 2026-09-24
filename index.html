@@ -208,13 +208,32 @@ select{
   background:var(--ink);color:var(--paper);border:none;
   font-size:11px;line-height:1;cursor:pointer;
 }
-.progbuilder{background:var(--panel);border:1px dashed var(--line-strong);border-radius:var(--radius);padding:12px;margin-bottom:12px}
-.morechords{margin-top:12px}
-.spice{border-left:2px solid var(--brass);padding-left:10px;margin:-4px 0 14px}
-.progchord.mark-sec .cname,.progchord.mark-bor .cname,.markkey{border:1px solid var(--brass);border-radius:6px;padding:0 4px}
-.progchord.mark-sec .cname,.markkey.sec{border-style:dashed}
-.markkey{font-size:11px}
-.prog button[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.morechords{margin:0 0 14px;padding:0 2px}
+.morechords summary{margin-bottom:0}
+.progchord.mark-sec .cname,.progchord.mark-bor .cname{border:1px solid var(--brass);border-radius:6px;padding:0 4px}
+.progchord.mark-sec .cname{border-style:dashed}
+/* Byggbrickan: klistrar mot skärmens nederkant medan man bläddrar i kartan */
+.tray{
+  position:sticky;bottom:0;z-index:5;
+  background:var(--panel);border:1px solid var(--line-strong);border-bottom:none;
+  border-radius:var(--radius) var(--radius) 0 0;
+  padding:8px 8px calc(8px + env(safe-area-inset-bottom));
+  margin:14px -10px 0;
+  box-shadow:0 -6px 16px rgba(0,0,0,.08);
+}
+.traychips{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;min-height:34px;align-items:center;padding-bottom:2px}
+.trayempty{font-size:13px;color:var(--ink-soft)}
+.tchip{display:inline-flex;align-items:center;flex:0 0 auto;border:1px solid var(--line-strong);border-radius:8px;background:var(--paper)}
+.tchip.mark-sec{border:1px dashed var(--brass)}
+.tchip.mark-bor{border-color:var(--brass)}
+.tchip .tn{font-family:"Instrument Serif",Georgia,serif;font-size:17px;background:none;border:none;color:var(--ink);padding:3px 3px 3px 9px;cursor:pointer}
+.tchip .tx{background:none;border:none;color:var(--ink-soft);font-size:11px;padding:6px 8px 6px 4px;cursor:pointer}
+.trayactions{display:flex;gap:3px;margin-top:8px;overflow-x:auto}
+.trayactions button{flex:0 0 auto;font:inherit;font-size:13px;background:var(--panel);color:var(--ink);border:1px solid var(--line-strong);border-radius:8px;padding:6px 7px;min-width:32px;cursor:pointer}
+.trayactions button[aria-expanded="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.trayactions button:disabled{opacity:.4;cursor:default}
+.traymsg{font-size:12.5px;color:var(--ink-soft);margin:6px 0 0}
+.traymsg:empty{display:none}
 .morechords summary{font-size:13px;color:var(--ink-soft);cursor:pointer}
 /* Ackordkartan: tre rader à sju kolumner, en kolumn per skalsteg */
 .mapscroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
@@ -257,7 +276,8 @@ select{
 <div class="tabs" role="tablist" id="tabs">
   <button class="tab" role="tab" id="tabbtn-ackord" aria-selected="true" tabindex="0" data-tab="ackord">Ackord</button>
   <button class="tab" role="tab" id="tabbtn-grepp" aria-selected="false" tabindex="-1" data-tab="grepp">Grepp</button>
-  <button class="tab" role="tab" id="tabbtn-vandningar" aria-selected="false" tabindex="-1" data-tab="vandningar">Ackordföljder</button>
+  <button class="tab" role="tab" id="tabbtn-bygg" aria-selected="false" tabindex="-1" data-tab="bygg">Bygg</button>
+  <button class="tab" role="tab" id="tabbtn-foljder" aria-selected="false" tabindex="-1" data-tab="foljder">Följder</button>
 </div>
 
 <div id="tab-ackord" class="tabpanel" role="tabpanel" aria-labelledby="tabbtn-ackord">
@@ -302,7 +322,7 @@ select{
     <div class="row">
       <label class="toggle"><input type="checkbox" id="fOpen" checked> Minst en öppen sträng</label>
       <label class="toggle"><input type="checkbox" id="fBarre" checked> Undvik barré</label>
-      <label class="toggle"><input type="checkbox" class="fScale" checked> Visa skaltoner</label>
+      <label class="toggle"><input type="checkbox" id="fScale" checked> Visa skaltoner i greppen</label>
     </div>
     <div class="row">
       <label class="field">Lägsta läge: <b id="posLabel" style="color:var(--ink)">band 0</b>
@@ -323,45 +343,44 @@ select{
   <div id="noRes"></div>
 </div>
 
-<div id="tab-vandningar" class="tabpanel" role="tabpanel" aria-labelledby="tabbtn-vandningar" hidden>
-  <div class="sec-head"><h2>Ackordkarta</h2><span id="mapMode"></span></div>
+<div id="tab-bygg" class="tabpanel" role="tabpanel" aria-labelledby="tabbtn-bygg" hidden>
   <div class="panel">
     <div class="pills" id="mapRoots" aria-label="Tonart"></div>
+    <p class="hint" id="mapMode"></p>
     <div class="mapscroll" style="margin-top:12px"><div class="mapinner" id="progMap"></div></div>
     <p class="hint" id="mapHint"></p>
   </div>
 
-  <div class="progbuilder" id="progBuilder" hidden>
-    <div id="builderChords"></div>
-    <div class="prog" style="margin-top:10px">
-      <button id="builderClear">Rensa</button>
-      <button id="builderSave">Spara</button>
-      <button id="builderCancel">Avbryt</button>
+  <details class="morechords">
+    <summary>Fler ackord i tonarten (sus, add9, 6 …)</summary>
+    <div class="chordbar" id="builderChips" style="margin-top:10px"></div>
+  </details>
+
+  <div id="builderGrepp" hidden></div>
+
+  <div class="tray" id="tray" aria-label="Din ackordföljd">
+    <div class="traychips" id="trayChips"></div>
+    <div class="trayactions">
+      <button id="bPlay" title="Spela följden" aria-label="Spela följden">▶</button>
+      <button id="bSec" title="Sätt in en sekundärdominant före sitt målackord" aria-label="Lägg till sekundärdominant">+V/x</button>
+      <button id="bBor" title="Sätt in eller byt till ett lånat ackord" aria-label="Lägg till lånat ackord">+Lån</button>
+      <button id="bUndo" title="Ångra" aria-label="Ångra">↶</button>
+      <button id="bShow" aria-controls="builderGrepp" title="Visa greppen">Grepp</button>
+      <button id="bGather" title="Samla i ett läge – välj grepp så att handen flyttar sig så lite som möjligt" aria-label="Samla i ett läge">🎯</button>
+      <button id="bSave" title="Spara under Följder → Mina" aria-label="Spara">💾</button>
+      <button id="bClear" title="Rensa följden" aria-label="Rensa">🗑</button>
     </div>
-    <details class="morechords">
-      <summary>Fler ackord i tonarten (sus, add9, 6 …)</summary>
-      <div class="chordbar" id="builderChips" style="margin-top:10px"></div>
-    </details>
+    <p class="traymsg" id="trayMsg" role="status"></p>
   </div>
+</div>
 
-  <div class="row" style="margin-bottom:4px">
-    <label class="toggle"><input type="checkbox" class="fScale" checked> Visa skaltoner i greppen</label>
-    <span class="hint" style="margin:0">Små bronsprickar = skalans toner runt greppet, för fills och melodi.</span>
+<div id="tab-foljder" class="tabpanel" role="tabpanel" aria-labelledby="tabbtn-foljder" hidden>
+  <div class="panel">
+    <div class="pills" id="progStyles" aria-label="Samling"></div>
+    <div class="pills" id="libRoots" aria-label="Tonart" style="margin-top:12px"></div>
   </div>
-
-  <div class="sec-head"><h2>Stilar</h2></div>
-  <div class="row"><div class="pills" id="progStyles"></div></div>
-  <div id="progsStyle"></div>
-
-  <div class="sec-head"><h2>Vanliga ackordföljder</h2></div>
-  <div id="progsBuiltin"></div>
-
-  <div class="sec-head">
-    <h2>Mina ackordföljder</h2>
-    <button class="pill small" id="newProgBtn">+ Ny ackordföljd</button>
-  </div>
-
-  <div id="progsCustom"></div>
+  <div id="library"></div>
+</div>
 </div>
 
 </div>
@@ -475,7 +494,7 @@ const state={
   root:0,
   chord:null,
   slashBass:null,
-  progStyle:null,
+  progStyle:"vanliga",
   family:"alla",
   onlyOpen:true,
   noBarre:true,
@@ -483,8 +502,9 @@ const state={
   sort:"open",
   tab:"ackord",
   progVoicingIdx:{},
-  progBuilder:null,
-  spiceOpen:{},
+  progBuilder:{chords:[]},
+  builderUndo:[],
+  builderShowGrepp:false,
   showScale:true
 };
 
@@ -501,6 +521,8 @@ function saveSavedProgs(list){
   catch(err){ /* privat läge, full kvot o.dyl. — sparas bara i minnet denna session */ }
 }
 let savedProgs=loadSavedProgs();
+const SCALE_KEY="ackordkartan:showScale";
+try{ if(localStorage.getItem(SCALE_KEY)==="0") state.showScale=false; }catch(err){ /* privat läge o.dyl. — standardvärdet gäller */ }
 
 /* ---------- Tema ---------- */
 const THEME_KEY="ackordkartan:theme";
@@ -929,20 +951,20 @@ function strum(notes,at,spread){
 /* ---------- Rendering ---------- */
 function el(id){return document.getElementById(id);}
 
-// Grundtonsväljaren finns både i Ackord-fliken och vid ackordkartan – samma tillstånd, samma hanterare.
+// Grundtonsväljaren finns i Ackord, Bygg och Följder – samma tillstånd, samma hanterare.
 // Namnen stavas efter vald skala: D♭-dur men C♯-moll, B♭ men aldrig A♯.
 function renderRoots(){
-  ["roots","mapRoots"].forEach(id=>{
+  ["roots","mapRoots","libRoots"].forEach(id=>{
     const box=el(id); box.innerHTML="";
     for(let pc=0;pc<12;pc++){
       const b=document.createElement("button");
       b.className="pill"+(id==="mapRoots"?" small":""); b.textContent=spell(pc,keyLetter(pc,state.mode));
       b.setAttribute("aria-pressed",pc===state.root);
-      b.onclick=()=>{ state.root=pc; state.chord=null; state.slashBass=null; state.progVoicingIdx={}; closeBuilder(); renderAll(); };
+      b.onclick=()=>{ const old=state.root; state.root=pc; state.chord=null; state.slashBass=null; state.progVoicingIdx={}; transposeBuilder(old); renderAll(); };
       box.appendChild(b);
     }
   });
-  el("mapMode").textContent=state.mode;
+  el("mapMode").textContent=state.mode+" · skalan byts under Ackord";
 }
 function renderFamilies(){
   const box=el("families"); box.innerHTML="";
@@ -954,19 +976,25 @@ function renderFamilies(){
     box.appendChild(b);
   });
 }
+// En väljare för hela biblioteket: Vanliga · stilarna · Mina
 function renderProgStyles(){
   const box=el("progStyles"); box.innerHTML="";
-  STYLE_PROGS.forEach(({key,name})=>{
+  [["vanliga","Vanliga"],...STYLE_PROGS.map(s=>[s.key,s.name]),["mina","Mina"+(savedProgs.length?" ("+savedProgs.length+")":"")]].forEach(([key,name])=>{
     const b=document.createElement("button");
     b.className="pill small"; b.textContent=name;
     b.setAttribute("aria-pressed",state.progStyle===key);
-    b.onclick=()=>{ state.progStyle=state.progStyle===key?null:key; renderProgStyles(); renderStyleProgs(); };
+    b.onclick=()=>{ state.progStyle=key; renderProgStyles(); renderLibrary(); };
     box.appendChild(b);
   });
 }
+function renderLibrary(){
+  el("library").innerHTML="";
+  if(state.progStyle==="mina") renderCustomProgs();
+  else if(state.progStyle==="vanliga") renderBuiltinProgs();
+  else renderStyleProgs();
+}
 function renderStyleProgs(){
-  const box=el("progsStyle"); box.innerHTML="";
-  if(!state.progStyle) return;
+  const box=el("library");
   const style=STYLE_PROGS.find(s=>s.key===state.progStyle);
   if(!style) return;
   style.seqs.forEach((entry,seqIdx)=>{
@@ -980,7 +1008,7 @@ function renderStyleProgs(){
       h.className="prog-title"; h.textContent=entry.label;
       box.appendChild(h);
     }
-    box.appendChild(voicingRow(seq,i=>"style-"+style.key+"-"+seqIdx+"-"+i,renderStyleProgs));
+    box.appendChild(voicingRow(seq,i=>"style-"+style.key+"-"+seqIdx+"-"+i,renderLibrary));
   });
 }
 let CHORDS=[];
@@ -1059,6 +1087,7 @@ function progRow(items,opts){
     chordsBox.appendChild(cell);
   });
   row.appendChild(chordsBox);
+  if(opts.bare) return row;
 
   const actions=document.createElement("div");
   actions.className="prog";
@@ -1096,7 +1125,8 @@ function progRow(items,opts){
   row.appendChild(actions);
   return row;
 }
-// Bläddringsbar ackordföljd där greppvalet minns i state.progVoicingIdx under keyFn(i).
+// Bläddringsbar biblioteksrad där greppvalet minns i state.progVoicingIdx under keyFn(i). "Bygg vidare" kopierar
+// följden (med valda grepp) till byggbrickan.
 // seq: [{chord, bass?, label?, mark?}] – mark ("sec"/"bor") ramar in insatta ackord i Krydda-varianterna.
 function voicingRow(seq,keyFn,rerender,opts){
   const lists=seq.map(e=>progVoicings(e.chord,e.bass));
@@ -1117,17 +1147,23 @@ function voicingRow(seq,keyFn,rerender,opts){
     onGather:()=>{
       gatherIdx(lists).forEach((j,i)=>{ state.progVoicingIdx[keyFn(i)]=j; });
       rerender();
-    }
+    },
+    actions:[{text:"✏️ Bygg vidare", onclick:()=>{
+      builderEdit(es=>{ es.splice(0,es.length,...seq.map((e,i)=>({chord:e.chord, bass:e.bass??null, idx:items[i].voicing?lists[i].indexOf(items[i].voicing):0}))); });
+      flashTray("Laddad från Följder – krydda, byt grepp eller spara som egen.");
+      state.tab="bygg"; renderTabs(); window.scrollTo({top:0});
+    }}]
   });
 }
 
 /* ---------- Krydda ----------
-   Varianter av en diatonisk följd enligt ackordkartans regler (jfr "Example in C" på chord_files-kartan):
+   Knapparna "+ V/x" och "+ Lån" i byggbrickan ändrar följden enligt ackordkartans regler (jfr "Example in C"
+   på chord_files-kartan). Varje tryck lägger till ett ackord till; ↶ ångrar.
    - sekundärdominant: V/x sätts in direkt före sitt mål x (inte före I – V/I är bara V), efter ett huvudackord
    - lånat ackord: ersätter samma skalsteg om det redan finns i följden (v→V), annars sätts det in mellan två av
      I/IV/V (in från ett nav, ut till ett nav), helst precis före I; följden räknas som en slinga, så lånet kan
-     hamna sist och leda tillbaka till första ackordet
-   seq: [{chord, deg, kind:"main"|"sec"|"bor"}] */
+     hamna sist och leda tillbaka till första ackordet. Lån vars rot redan finns i följden hoppas över.
+   seq: [{chord, deg, kind:"main"|"sec"|"bor"|"other", entry?}] */
 function spiceSec(seq,map){
   for(let i=1;i<seq.length;i++){
     const t=seq[i], p=seq[i-1];
@@ -1140,7 +1176,7 @@ function spiceSec(seq,map){
 }
 function spiceBor(seq,map){
   // ♭VII först (dur), V (moll → lånat dur-V), sedan ♭VI, iv …; förminskade lån hoppas över
-  let c=[6,4,5,3,1,2].map(d=>map.bor[d]).find(c=>c && c.degTriad!=="°");
+  let c=[6,4,5,3,1,2].map(d=>map.bor[d]).find(c=>c && c.degTriad!=="°" && !seq.some(e=>e.chord.root===c.root && e.kind!=="main"));
   if(!c) return null;
   // följer följdens form: treklanger får ett lånat treklangsackord (B♭, inte B♭7)
   if(seq.every(e=>e.kind!=="main" || e.chord.fam==="treklang"))
@@ -1149,6 +1185,7 @@ function spiceBor(seq,map){
   // finns skalsteget redan i följden: byt ut det (v→V i moll, IV→iv i dur) – det är själva lånet
   const same=seq.map(e=>e.kind==="main" && e.deg===c.deg).lastIndexOf(true);
   if(same>=0) return seq.map((e,i)=>i===same?lent:e);
+  if(seq.some(e=>e.chord.root===c.root)) return null;
   const hub=e=>e.kind==="main" && MAP_HUBS.includes(e.deg);
   const n=seq.length;
   let best=-1;
@@ -1159,15 +1196,6 @@ function spiceBor(seq,map){
   if(best<0) return null;
   return [...seq.slice(0,best),lent,...seq.slice(best)];
 }
-function spiceVariants(seq){
-  const map=progMap(), out=[];
-  const sec=spiceSec(seq,map), bor=spiceBor(seq,map);
-  if(sec) out.push({label:"+ sekundärdominant", seq:sec});
-  if(bor) out.push({label:"+ lånat ackord", seq:bor});
-  const both=sec && spiceBor(sec,map);
-  if(both) out.push({label:"+ båda", seq:both});
-  return out;
-}
 
 function renderBuiltinProgs(){
   const sc=MODES[state.mode];
@@ -1175,37 +1203,17 @@ function renderBuiltinProgs(){
   const sets = isMinor
     ? [[0,5,6],[0,3,4],[0,6,5,6],[0,3,6,2],[0,5,2,6]]
     : [[0,4,5,3],[0,3,4],[5,3,0,4],[1,4,0],[0,2,3,4]];
-  const box=el("progsBuiltin"); box.innerHTML="";
+  const box=el("library");
   sets.forEach((degs,row)=>{
     const chs=degs.map(d=>CHORDS.find(c=>c.roman.replace(/[°]/g,"").toLowerCase()===ROMAN[sc[d]].toLowerCase()) || CHORDS.find(c=>c.root===(state.root+sc[d])%12));
     if(chs.some(c=>!c)) return;
-    const seq=chs.map((chord,i)=>({chord,deg:degs[i],kind:"main"}));
-    const open=!!state.spiceOpen[row];
-    const variants=spiceVariants(seq);
-    box.appendChild(voicingRow(seq,i=>row+"-"+i,renderBuiltinProgs,{
-      actions:variants.length?[{text:"✨ Krydda", pressed:open, onclick:()=>{ state.spiceOpen[row]=!open; renderBuiltinProgs(); }}]:[]
-    }));
-    if(!open) return;
-    const wrap=document.createElement("div");
-    wrap.className="spice";
-    variants.forEach((v,vi)=>{
-      const h=document.createElement("h3");
-      h.className="prog-title"; h.textContent=v.label;
-      wrap.appendChild(h);
-      wrap.appendChild(voicingRow(v.seq.map(e=>({chord:e.chord, mark:e.kind==="main"?null:e.kind})),
-        i=>"spice-"+row+"-"+vi+"-"+i,renderBuiltinProgs));
-    });
-    const legend=document.createElement("p");
-    legend.className="hint";
-    legend.innerHTML=`<span class="markkey sec">streckad</span> = sekundärdominant, <span class="markkey bor">hel ram</span> = lånat ackord – samma regler som ackordkartan.`;
-    wrap.appendChild(legend);
-    box.appendChild(wrap);
+    box.appendChild(voicingRow(chs.map(chord=>({chord})),i=>row+"-"+i,renderLibrary));
   });
 }
 function renderCustomProgs(){
-  const box=el("progsCustom"); box.innerHTML="";
+  const box=el("library");
   if(!savedProgs.length){
-    box.innerHTML=`<div class="empty">Inga sparade ackordföljder än. Tryck "+ Ny ackordföljd" för att bygga en.</div>`;
+    box.innerHTML=`<div class="empty">Inga sparade ackordföljder än. Bygg en i fliken <b>Bygg</b> och tryck Spara.</div>`;
     return;
   }
   savedProgs.forEach(p=>{
@@ -1215,7 +1223,7 @@ function renderCustomProgs(){
         if(!confirm(`Ta bort ackordföljden "${p.name}"?`)) return;
         savedProgs=savedProgs.filter(x=>x.id!==p.id);
         saveSavedProgs(savedProgs);
-        renderCustomProgs();
+        renderProgStyles(); renderLibrary();
       }
     });
     const name=document.createElement("div");
@@ -1225,60 +1233,96 @@ function renderCustomProgs(){
     box.appendChild(row);
   });
 }
+
+/* ---------- Byggbrickan ----------
+   state.progBuilder.chords = [{chord, bass, idx}]. Alla ändringar går via builderEdit(), som sparar en ögonblicksbild
+   i state.builderUndo för ↶. Tonartsbyte transponerar följden (som reglaget på chord_files-kartan) i stället för att
+   tömma den; skalbyte stavar om den. */
+function builderEdit(fn){
+  state.builderUndo.push(state.progBuilder.chords.map(e=>({...e})));
+  if(state.builderUndo.length>50) state.builderUndo.shift();
+  fn(state.progBuilder.chords);
+  flashTray("");
+  renderBuilder();
+}
+function transposeBuilder(oldRoot){
+  const semis=pc=>mod12(pc-oldRoot);
+  state.progBuilder.chords=state.progBuilder.chords.map(e=>({
+    chord:chordFromRootSfx(mod12(state.root+semis(e.chord.root)),e.chord.sfx),
+    bass:e.bass==null?null:mod12(state.root+semis(e.bass)),
+    idx:0
+  }));
+  state.builderUndo=[];
+}
+const entryLabel=e=>e.chord.name+(e.bass!=null?"/"+chordPcName(e.chord,e.bass):"");
+function entryList(e){ return progVoicings(e.chord,e.bass); }
+function entryVoicing(e){ const l=entryList(e); if(e.idx>=l.length) e.idx=0; return l[e.idx]; }
+async function playNotes(notes){ const a=ctx(); if(a.state==="suspended") await a.resume(); strum(notes); }
+function builderSeq(map){
+  return state.progBuilder.chords.map(e=>{
+    const r=mapRole(e.chord,map);
+    return {chord:e.chord, deg:r?r.deg:-1, kind:r?r.kind:"other", entry:e};
+  });
+}
+function applySpice(fn){
+  const map=progMap(), res=fn(builderSeq(map),map);
+  if(!res) return;
+  builderEdit(es=>{ es.splice(0,es.length,...res.map(x=>x.entry||{chord:x.chord,bass:null,idx:0})); });
+}
+function flashTray(msg){ el("trayMsg").textContent=msg; }
 function renderBuilderChips(){
   const box=el("builderChips"); box.innerHTML="";
   CHORDS.forEach(c=>{
     const b=document.createElement("button");
     b.className="chipname";
     b.innerHTML=`<span class="nm">${c.name}</span><span class="rn">${c.roman}</span>`;
-    b.onclick=()=>{
-      state.progBuilder.chords.push({chord:c, idx:0});
-      renderBuilder();
-    };
+    b.onclick=()=>{ builderEdit(es=>es.push({chord:c,bass:null,idx:0})); const v=entryVoicing({chord:c,bass:null,idx:0}); if(v) playNotes(v.notes); };
     box.appendChild(b);
   });
 }
 function renderBuilder(){
-  if(!state.progBuilder) return;
-  const box=el("builderChords"); box.innerHTML="";
-  const entries=state.progBuilder.chords;
-  if(!entries.length){
-    box.innerHTML=`<div class="empty">Tryck på ett ackord nedan för att lägga till det i ackordföljden.</div>`;
-  }else{
-    const items=entries.map(entry=>{
-      const list=progVoicings(entry.chord);
-      if(entry.idx>=list.length) entry.idx=0;
-      return {label:entry.chord.name, voicing:list[entry.idx], chord:entry.chord};
-    });
-    box.appendChild(progRow(items,{
+  const entries=state.progBuilder.chords, map=progMap();
+  const chips=el("trayChips"); chips.innerHTML="";
+  if(!entries.length) chips.innerHTML=`<span class="trayempty">Din följd hamnar här – tryck på ackord i kartan.</span>`;
+  entries.forEach((e,i)=>{
+    const r=mapRole(e.chord,map), lbl=entryLabel(e);
+    const wrap=document.createElement("span");
+    wrap.className="tchip"+(r && r.kind!=="main"?" mark-"+r.kind:"");
+    const nb=document.createElement("button");
+    nb.className="tn"; nb.textContent=lbl; nb.setAttribute("aria-label","Spela "+lbl);
+    nb.onclick=()=>{ const v=entryVoicing(e); if(v) playNotes(v.notes); };
+    const xb=document.createElement("button");
+    xb.className="tx"; xb.textContent="✕"; xb.setAttribute("aria-label","Ta bort "+lbl);
+    xb.onclick=()=>builderEdit(es=>es.splice(i,1));
+    wrap.append(nb,xb);
+    chips.appendChild(wrap);
+  });
+  chips.scrollLeft=chips.scrollWidth;
+
+  const seq=builderSeq(map);
+  el("bSec").disabled=!spiceSec(seq,map);
+  el("bBor").disabled=!spiceBor(seq,map);
+  el("bUndo").disabled=!state.builderUndo.length;
+  ["bPlay","bGather","bShow","bSave","bClear"].forEach(id=>{ el(id).disabled=!entries.length; });
+  el("bShow").setAttribute("aria-expanded",state.builderShowGrepp);
+
+  const g=el("builderGrepp"); g.innerHTML="";
+  g.hidden=!(state.builderShowGrepp && entries.length);
+  if(!g.hidden){
+    const items=entries.map(e=>({label:entryLabel(e), voicing:entryVoicing(e), chord:e.chord, mark:(r=>r&&r.kind!=="main"?r.kind:null)(mapRole(e.chord,map))}));
+    g.appendChild(progRow(items,{
+      bare:true,
       scrollable:true,
-      onRemove:i=>{ entries.splice(i,1); renderBuilder(); },
-      onGather:()=>{
-        gatherIdx(entries.map(e=>progVoicings(e.chord))).forEach((j,i)=>{ entries[i].idx=j; });
-        renderBuilder();
-      },
+      onRemove:i=>builderEdit(es=>es.splice(i,1)),
       onScroll:(i,delta)=>{
-        const entry=entries[i];
-        const list=progVoicings(entry.chord);
-        if(!list.length) return;
-        entry.idx=(entry.idx+delta+list.length)%list.length;
+        const e=entries[i], l=entryList(e);
+        if(!l.length) return;
+        e.idx=(e.idx+delta+l.length)%l.length;
         renderBuilder();
       }
     }));
   }
   renderBuilderChips();
-  renderMap();
-}
-function openBuilder(){
-  state.progBuilder=state.progBuilder||{chords:[]};
-  el("progBuilder").hidden=false;
-  el("newProgBtn").hidden=true;
-  renderBuilder();
-}
-function closeBuilder(){
-  state.progBuilder=null;
-  el("progBuilder").hidden=true;
-  el("newProgBtn").hidden=false;
   renderMap();
 }
 
@@ -1335,14 +1379,14 @@ function renderMap(){
   const key=state.root+"|"+state.mode;
   const anim=lastMapKey!==null && lastMapKey!==key;
   lastMapKey=key;
-  const entries=state.progBuilder?state.progBuilder.chords:[];
+  const entries=state.progBuilder.chords;
   const last=entries.length?entries[entries.length-1].chord:null;
   const role=last?mapRole(last,map):null;
   const ok=mapSuggest(role);
   const parName=map.parMode.startsWith("Dur")?"dur":"moll";
-  [["sec","Sekundärdominanter","löses upp till ackordet under"],
-   ["main","Huvudackord","fritt mellan alla · börja på I"],
-   ["bor","Lånat från "+parName,"in från I, IV eller V, ut samma väg"]].forEach(([kind,title,rule])=>{
+  [["sec","Sekundärdominanter","↓ till ackordet under"],
+   ["main","Huvudackord","↻ fritt · börja på I"],
+   ["bor","Lånat från "+parName,"⇅ via I, IV, V"]].forEach(([kind,title,rule])=>{
     const head=document.createElement("div");
     head.className="maphead";
     head.innerHTML=`<b>${title}</b> · ${rule}`;
@@ -1358,19 +1402,17 @@ function renderMap(){
       else if(kind==="main" && d===0 && !last) b.classList.add("start");
       b.innerHTML=`<span class="mr">${label}</span><span class="mn">${c.rootName}</span><span class="mq">${c.sfx||"&nbsp;"}</span>`;
       b.setAttribute("aria-label",`${c.name}, ${label}. Lägg till i ackordföljden`);
-      b.onclick=async()=>{
-        if(!state.progBuilder) openBuilder();
-        state.progBuilder.chords.push({chord:c, idx:0});
-        renderBuilder();
+      b.onclick=()=>{
+        builderEdit(es=>es.push({chord:c,bass:null,idx:0}));
         const v=progVoicings(c)[0];
-        if(v){ const a=ctx(); if(a.state==="suspended") await a.resume(); strum(v.notes); }
+        if(v) playNotes(v.notes);
       };
       row.appendChild(b);
     });
     box.appendChild(row);
   });
   let hint;
-  if(!last) hint="Tryck på ett ackord för att börja bygga en ackordföljd – den hamnar under kartan. Tonerna stavas efter tonarten.";
+  if(!last) hint="Tryck på ett ackord för att börja – följden samlas i brickan längst ner. Byter du tonart följer följden med.";
   else if(!role) hint=`${last.name} ligger utanför kartan – fortsätt var som helst.`;
   else if(role.kind==="sec") hint=`${last.name} (${map.sec[role.deg].label}) vill lösas upp till ${map.main[role.deg].name}.`;
   else if(role.kind==="bor") hint=`Från lånade ${last.name}: tillbaka till I, IV eller V – eller vidare till ett annat lånat ackord.`;
@@ -1431,7 +1473,7 @@ function renderVoicings(){
   });
 }
 function renderAll(){
-  renderRoots(); renderChords(); renderMap(); renderBuiltinProgs(); renderCustomProgs(); renderProgStyles(); renderStyleProgs(); drawNeck(); renderVoicings(); renderTabs();
+  renderRoots(); renderChords(); renderBuilder(); renderProgStyles(); renderLibrary(); drawNeck(); renderVoicings(); renderTabs();
 }
 function renderTabs(){
   document.querySelectorAll(".tab").forEach(b=>{
@@ -1441,7 +1483,8 @@ function renderTabs(){
   });
   el("tab-ackord").hidden = state.tab!=="ackord";
   el("tab-grepp").hidden = state.tab!=="grepp";
-  el("tab-vandningar").hidden = state.tab!=="vandningar";
+  el("tab-bygg").hidden = state.tab!=="bygg";
+  el("tab-foljder").hidden = state.tab!=="foljder";
 }
 
 /* ---------- Init ---------- */
@@ -1449,22 +1492,23 @@ function renderTabs(){
   const ts=el("tuning");
   Object.keys(TUNINGS).forEach(k=>{ const o=document.createElement("option"); o.value=k;o.textContent=k;ts.appendChild(o); });
   ts.value=state.tuning;
-  ts.onchange=()=>{ state.tuning=ts.value; state.progVoicingIdx={}; closeBuilder(); drawNeck(); renderVoicings(); renderBuiltinProgs(); renderStyleProgs(); };
+  ts.onchange=()=>{ state.tuning=ts.value; state.progVoicingIdx={}; state.progBuilder.chords.forEach(e=>{ e.idx=0; }); drawNeck(); renderVoicings(); renderBuilder(); renderLibrary(); };
 
   const ms=el("mode");
   Object.keys(MODES).forEach(k=>{ const o=document.createElement("option"); o.value=k;o.textContent=k;ms.appendChild(o); });
   ms.value=state.mode;
-  ms.onchange=()=>{ state.mode=ms.value; state.chord=null; state.slashBass=null; state.progVoicingIdx={}; closeBuilder(); renderRoots(); renderChords(); renderBuiltinProgs(); renderStyleProgs(); drawNeck(); renderVoicings(); };
+  ms.onchange=()=>{ state.mode=ms.value; state.chord=null; state.slashBass=null; state.progVoicingIdx={}; transposeBuilder(state.root); renderRoots(); renderChords(); renderBuilder(); renderLibrary(); drawNeck(); renderVoicings(); };
 
   el("fOpen").onchange=e=>{ state.onlyOpen=e.target.checked; renderVoicings(); };
   el("fBarre").onchange=e=>{ state.noBarre=e.target.checked; renderVoicings(); };
   el("fPos").oninput=e=>{ state.minPos=+e.target.value; el("posLabel").textContent="band "+state.minPos; renderVoicings(); };
   el("sort").onchange=e=>{ state.sort=e.target.value; renderVoicings(); };
-  document.querySelectorAll(".fScale").forEach(cb=>cb.onchange=e=>{
+  el("fScale").checked=state.showScale;
+  el("fScale").onchange=e=>{
     state.showScale=e.target.checked;
-    document.querySelectorAll(".fScale").forEach(o=>o.checked=state.showScale);
-    renderVoicings(); renderBuiltinProgs(); renderStyleProgs(); renderBuilder();
-  });
+    try{ localStorage.setItem(SCALE_KEY,state.showScale?"1":"0"); }catch(err){ /* sparas bara denna session */ }
+    renderVoicings(); renderLibrary(); renderBuilder();
+  };
 
   document.querySelectorAll(".tab").forEach(b=>{
     b.onclick=()=>{ state.tab=b.dataset.tab; renderTabs(); };
@@ -1487,18 +1531,35 @@ function renderTabs(){
 
   el("themeToggle").onclick=cycleTheme;
 
-  el("newProgBtn").onclick=()=>{ openBuilder(); el("progBuilder").scrollIntoView({behavior:"smooth",block:"center"}); };
-  el("builderClear").onclick=()=>{ state.progBuilder.chords=[]; renderBuilder(); };
-  el("builderCancel").onclick=closeBuilder;
-  el("builderSave").onclick=()=>{
+  el("bPlay").onclick=async()=>{
+    const a=ctx(); if(a.state==="suspended") await a.resume();
+    let t=a.currentTime+0.05;
+    state.progBuilder.chords.forEach(e=>{ const v=entryVoicing(e); if(v) strum(v.notes,t,0.028); t+=1.0; });
+  };
+  el("bGather").onclick=()=>{
+    const es=state.progBuilder.chords;
+    gatherIdx(es.map(entryList)).forEach((j,i)=>{ es[i].idx=j; });
+    state.builderShowGrepp=true;
+    renderBuilder();
+  };
+  el("bSec").onclick=()=>applySpice(spiceSec);
+  el("bBor").onclick=()=>applySpice(spiceBor);
+  el("bUndo").onclick=()=>{
+    if(!state.builderUndo.length) return;
+    state.progBuilder.chords=state.builderUndo.pop();
+    flashTray("");
+    renderBuilder();
+  };
+  el("bShow").onclick=()=>{ state.builderShowGrepp=!state.builderShowGrepp; renderBuilder(); };
+  el("bClear").onclick=()=>builderEdit(es=>es.splice(0,es.length));
+  el("bSave").onclick=()=>{
     const entries=state.progBuilder.chords;
-    if(entries.length<2){ alert("Lägg till minst två ackord innan du sparar."); return; }
+    if(entries.length<2){ flashTray("Lägg till minst två ackord innan du sparar."); return; }
     const chordsData=[];
     for(const entry of entries){
-      const list=progVoicings(entry.chord);
-      const v=list[entry.idx]||list[0];
-      if(!v){ alert(`Hittade inget spelbart grepp för ${entry.chord.name}.`); return; }
-      chordsData.push({name:entry.chord.name, frets:v.frets});
+      const v=entryVoicing(entry);
+      if(!v){ flashTray(`Hittade inget spelbart grepp för ${entryLabel(entry)}.`); return; }
+      chordsData.push({name:entryLabel(entry), frets:v.frets});
     }
     const name=prompt("Namn på ackordföljden?");
     if(!name || !name.trim()) return;
@@ -1509,8 +1570,8 @@ function renderTabs(){
       chords: chordsData
     });
     saveSavedProgs(savedProgs);
-    closeBuilder();
-    renderCustomProgs();
+    flashTray(`"${name.trim()}" sparad under Följder → Mina.`);
+    renderProgStyles(); renderLibrary();
   };
 
   renderFamilies();
