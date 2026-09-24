@@ -1,12 +1,16 @@
 # Ackordkartan
 
-En app som genererar gitarrgrepp i en vald tonart — med fokus på **öppna klanger högt upp på halsen**, inte bara barrégrepp i första läget. Kärnan (all teori, all greppsökning, hela UI:t) är en enfilsapp i [index.html](index.html) — ingen byggkedja, inga beroenden, inget ackordbibliotek, allt körs i webbläsaren.
+En app som genererar gitarrgrepp i en vald tonart — med fokus på **öppna klanger högt upp på halsen**, inte bara barrégrepp i första läget. Kärnan (all teori, all greppsökning, hela UI:t) är en enfilsapp i [index.html](index.html) — ingen byggkedja, inga beroenden, praktiskt taget inget ackordbibliotek (bara de klassiska öppna skolboksgreppen), allt körs i webbläsaren.
 
 ## Skärmdumpar
 
-| Ackord | Grepp | Ackordföljder |
+| Ackord | Grepp | Bygg |
 | --- | --- | --- |
-| [![Ackord-fliken: tonart, skala och ackordlista](screenshots/ackord.png)](screenshots/ackord.png) | [![Grepp-fliken: halsdiagram och greppkort för Cadd9](screenshots/grepp.png)](screenshots/grepp.png) | [![Ackordföljder-fliken: bläddringsbara ackordföljder, mörkt läge](screenshots/vandningar-dark.png)](screenshots/vandningar-dark.png) |
+| [![Ackord-fliken: ackorden i C-dur per skalsteg med grundgrepp, färgvarianter hopfällda](screenshots/ackord.png)](screenshots/ackord.png) | [![Grepp-fliken: ackordval per skalsteg, halsdiagram och grepp för Cadd9 med C i basen, grupperade efter läge](screenshots/grepp.png)](screenshots/grepp.png) | [![Bygg-fliken: ackordkartan med sekundärdominanter, huvudackord och lånade ackord, och byggbrickan med en kryddad följd](screenshots/bygg.png)](screenshots/bygg.png) |
+
+| Följder (mörkt läge) | Tonart |
+| --- | --- |
+| [![Följder-fliken i mörkt läge: jazzföljder med romerska siffror och bläddringsbara grepp](screenshots/foljder-dark.png)](screenshots/foljder-dark.png) | [![Tonartsarket: grundton, skala och stämning](screenshots/tonart.png)](screenshots/tonart.png) |
 
 ## Så fungerar greppsökningen
 
@@ -23,14 +27,17 @@ Steg 4 är hela poängen: filtrera på "minst en öppen sträng" + lägsta läge
 
 ## Funktioner
 
-- Sju skalor: dur, moll, dorisk, mixolydisk, lydisk, frygisk, harmonisk moll
-- Treklanger, septimackord och färgade ackord (sus2, sus4, 6, add9, 9, m9 …) filtrerade till det som håller sig i tonarten
-- Alternativa stämningar: standard, drop D, DADGAD, öppen G, öppen D, nedstämt ett halvt/helt steg
-- Tre flikar: **Ackord** (tonart/skala/ackordval), **Grepp** (halsdiagram, filter, greppkort) och **Ackordföljder**
-- Halsdiagram som visar ackordstonerna mot skalan över 15 band
-- Ackordföljder: fem vanliga ackordföljder per tonart med bläddringsbara grepp per ackord, en stilväljare med tio musikstilar (blues, rock, punk, country, jazz, bossa nova, flamenco, spansk musik, klassisk musik, reggae) — oberoende av vald skala — plus en byggare för egna ackordföljder som sparas i webbläsaren (låsta till de exakta grepp du valde)
-- Uppspelning med Karplus-Strong-syntes via Web Audio, inget ljudmaterial att ladda
-- Följer systemets ljusa/mörka läge
+- **Fyra flikar**: **Ackord** (ackorden i tonarten), **Grepp** (halsdiagram, filter, greppkort), **Bygg** (ackordkartan och en byggbricka för egna följder) och **Följder** (bibliotek med vanliga följder, tio stilar och dina sparade)
+- **En gemensam tonartsrad** under flikarna: ‹ › flyttar ett halvt steg, mittknappen öppnar ett ark med grundton, sju skalor (dur, moll, dorisk, mixolydisk, lydisk, frygisk, harmonisk moll) och sju stämningar (standard, drop D, DADGAD, öppen G, öppen D, ett halvt/helt steg ned)
+- **Stavning efter tonart**: B♭ i F-dur, E♭maj7 som ♭III i C, D♭-dur men C♯-moll
+- **Ackord**: treklanger och septimackord per skalsteg med klassiska öppna grundgrepp; färgade varianter (sus2, sus4, 6, add9, 9, m9 …) som håller sig i tonarten fälls ut per steg
+- **Grepp**: välj skalsteg och variant direkt i fliken; grepp med grundtonen i basen först, grupperade efter läge (band 0–4 / 5–9 / 10+), omvändningar hopfällda; valfri slash-bas; skalans toner som små prickar runt greppet
+- **Ackordkartan** (inspirerad av chord_files *Progressions*): sekundärdominanter, huvudackord och lånade ackord från parallelltonarten i en kolumn per skalsteg; efter varje ackord markeras de naturliga nästa stegen
+- **Byggbrickan**: följden som ackordbrickor, **+V/x** och **+Lån** kryddar den enligt kartans regler, ↶ ångrar, 🎯 *Samla i ett läge* väljer grepp som minimerar handförflyttningen, 💾 sparar; byter du tonart följer följden med
+- **Följder**: fem vanliga följder per tonart och tio stilar (blues, rock, punk, country, jazz, bossa nova, flamenco, spansk musik, klassisk musik, reggae), med romerska siffror, bläddringsbara grepp och *Bygg vidare* till byggbrickan
+- **Uppspelning** med Karplus-Strong-syntes via Web Audio (inget ljudmaterial att ladda): tempo 40–200 bpm, 1/2/4 slag per ackord, slinga, och markering av ackordet som spelas
+- **Minns var du var**: flik, tonart, skala, stämning, filter, valt ackord, byggarens följd och tempo sparas i webbläsaren
+- Följer systemets ljusa/mörka läge (eller välj själv)
 - Installerbar som app på Android/Chrome (PWA) och håller skärmen vaken medan appen är öppen
 
 ## Köra lokalt
@@ -57,8 +64,15 @@ All teori, sökning och rendering ligger i `index.html`:
 | `findVoicings()` | sökningen och poängsättningen ovan |
 | `fingering()`, `voicingFromFrets()` | finger 1–4 efter bandordning; bygger ett grepp baklänges från sparade band |
 | `diagram()`, `drawNeck()` | SVG-rendering av greppdiagram respektive halsdiagram |
-| `progRow()`, `renderBuiltinProgs()`, `renderStyleProgs()`, `renderCustomProgs()` | Ackordföljder-fliken: delad radrendering, de fem inbyggda följderna, tio stilprogressioner (`STYLE_PROGS`, oberoende av vald skala), sparade/byggda egna |
-| `pluck()`, `strum()` | Karplus-Strong |
+| `keyLetter()`, `spell()`, `chordPcName()` | stavning efter tonart (en bokstav per skalsteg) |
+| `renderRoots()`, `renderKeySheet()`, `setRoot()`/`setMode()`/`setTuning()` | tonartsraden och tonartsarket |
+| `renderGreppChords()`, `renderVoicings()` | Grepp-fliken: ackordval och greppkort grupperade efter läge |
+| `progMap()`, `renderMap()`, `spiceSec()`/`spiceBor()` | ackordkartan och Krydda-reglerna |
+| `renderBuilder()`, `builderEdit()`, `transposeBuilder()` | byggbrickan: följden, ångra, transponering |
+| `progRow()`, `voicingRow()`, `renderLibrary()` | rader med greppdiagram och biblioteket i Följder (`STYLE_PROGS` för stilarna) |
+| `gatherIdx()` | *Samla i ett läge*: Viterbi över greppistorna |
+| `pluck()`, `strum()`, `togglePlayback()` | Karplus-Strong och uppspelning av följder |
+| `saveState()`, `loadState()` | minnet mellan besöken |
 
 Utöver `index.html` finns ett litet PWA-skal som gör appen installerbar (Chrome/Android):
 
